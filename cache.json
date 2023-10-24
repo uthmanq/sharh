@@ -4,8 +4,8 @@
       "id": "bb818ddf-14a4-437f-b745-a87653e600bc",
       "Arabic": "بسم الله الرحمن الرحيم",
       "English": "In the name of Allah, the Most Beneficent, the Most Merciful.",
-      "commentary": "None",
-      "rootwords": "None"
+      "commentary": "It is disputed whether this line is from the words of the author or whether it is an addition of the manuscript scribes. However, it is the practice of the scholars to start their works with the name of Allah due to the Hadith of the Messenger ﷺ encouraging this and the vast narrations of the Prophet ﷺ starting his actions and speech with the name of Allah and His praise.",
+      "rootwords": "بسم: made up of two words: ب + اسم. "
     },
     {
       "id": "aabc25fa-7dc5-4822-98f7-2b7cbc70ee05",
@@ -15,16 +15,9 @@
       "rootwords": "None"
     },
     {
-      "id": "c3b13d53-1ff5-47a1-82c1-c7b00ce540fd",
-      "Arabic": "المقدمة الأولى: في الأحكام",
-      "English": "Preliminary 1: Judgments",
-      "commentary": "None",
-      "rootwords": "None"
-    },
-    {
       "id": "a7606744-3584-4819-997b-2e62b7131927",
       "Arabic": "قال الشّيخ الإمام العالم العلاّمة المحقّق أبو عبد الله محمّد السّنوسي الحسني رحمه الله تعالى: ",
-      "English": "The Shaykh, Imam, Expert, Abu Abdullah Muhammad Al-Sanusi Al-Hassani, may Allah have mercy on him said:",
+      "English": "The Shaykh, Imam, Expert, Abu Abdullah Muhammad Al-Sanusi Al-Hasani, may Allah have mercy on him said:",
       "commentary": "None",
       "rootwords": "None"
     },
@@ -36,11 +29,39 @@
       "rootwords": "None"
     },
     {
+      "id": "c3b13d53-1ff5-47a1-82c1-c7b00ce540fd",
+      "Arabic": "المقدمة الأولى: في الأحكام",
+      "English": "Preliminary 1: Judgments",
+      "commentary": "None\n\n\nsdfdsf\n\n\nsdfsdfdsf",
+      "rootwords": "None"
+    },
+    {
       "id": "be72269d-5dfe-4b35-9a21-eeb24601248e",
       "Arabic": "الحكم إثبات أمر أو نفيه.",
       "English": "A judgment is the affirmation of a matter, or its negation.",
       "commentary": "The purpose of this preliminary is to establish a paradigm through which the rest of the Divine Law can be understood. This preliminary has ties to every science. All knowledge of creations , secular and religious, can be divided into two categories: concepts and propositions made out of those concepts. For example, “human” is a concept. “Humans have bodies” is a proposition. A proposition and a judgement are synonyms.  The reason a proposition is called a judgement is because you are judging the subject of the proposition by the predicate. You are judging, or affirming, “humans” to have bodies. Likewise, I can judge through negation, such as saying “the universe did not create itself”. All of our knowledge is divided in this way. Out of these, Imam Al-Sanusi mentions three of the types of propositions that are used in the majority of discussions related to Aqida, Usul-ul-Fiqh, and Fiqh. ",
       "rootwords": "None"
+    },
+    {
+      "id": "f7ba3601-0be4-407a-959f-d51291e3532f",
+      "Arabic": "و ينقسم إلى ثلاثة أقسام:",
+      "English": "It is divided into three categories:",
+      "commentary": "None",
+      "rootwords": "None"
+    },
+    {
+      "id": "8051d870-ade0-4bf5-b26f-590825a4454e",
+      "Arabic": "adfdasfda",
+      "English": "asdfadsf",
+      "commentary": "fsdfsdf",
+      "rootwords": "sdfsdfsdfsdf"
+    },
+    {
+      "id": "20207088-ef4b-4d0c-9b75-95a48a6ddc27",
+      "Arabic": "dsfsdfsdf",
+      "English": "sdfsdf",
+      "commentary": "sdfsdfds",
+      "rootwords": "sdfsdfsdf"
     }
   ]
 }

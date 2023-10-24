@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-const LineDetail = ({ line, fetchLines, lines }) => {
+const LineDetail = ({ line, fetchLines, lines,showEditor }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedLine, setEditedLine] = useState(line || {});
     const [originalId, setOriginalId] = useState(line ? line.id : '');
+    
 
     useEffect(() => {
         setEditedLine(line || {});
@@ -113,46 +114,55 @@ const LineDetail = ({ line, fetchLines, lines }) => {
     };
 
     if (!line) {
-        return <div>Please select a line to see the details</div>;
+        return <div></div>;
     }
 
     return (
-        <div className="line-details">
-            <h2 className="detail-title">{line.Arabic}</h2>
-            {isEditing ? (
-                <div>
-                    <label>
-                        Arabic:
-            <input type="text" value={editedLine.Arabic} onChange={handleChange('Arabic')} />
-                    </label>
-                    <label>
-                        English:
-            <input type="text" value={editedLine.English} onChange={handleChange('English')} />
-                    </label>
-                    <label>
-                        Commentary:
-            <textarea value={editedLine.commentary} onChange={handleChange('commentary')} />
-                    </label>
-                    <label>
-                        Rootwords:
-            <input type="text" value={editedLine.rootwords} onChange={handleChange('rootwords')} />
-                    </label>
-                </div>
-            ) : (
-                <div className="detail-container">
-                    <div className="text-container">
-                        <div className="english-detail">{line.English}</div>
-                        <div className="arabic-detail">{line.Arabic}</div>
+            <div className="line-details">
+                {isEditing ? (
+                    <div>
+                        <label>
+                            Arabic:
+                            <input type="text" value={editedLine.Arabic} onChange={handleChange('Arabic')} />
+                        </label>
+                        <label>
+                            English:
+                            <input type="text" value={editedLine.English} onChange={handleChange('English')} />
+                        </label>
+                        <label>
+                            Commentary:
+                            <textarea value={editedLine.commentary} onChange={handleChange('commentary')} />
+                        </label>
+                        <label>
+                            Rootwords:
+                            <input type="text" value={editedLine.rootwords} onChange={handleChange('rootwords')} />
+                        </label>
                     </div>
-                    <div className="commentary-detail">{line.commentary}</div>
-                    <div className="rootword-detail">Arabic Root Word Breakdown: {line.rootwords}</div>
-                </div>
+                ) : (
+                    
+                    <div className="detail-container">
+                        <div className="text-container">
+                            <div className="english-detail">{line.English}</div>
+                            <div className="arabic-detail">{line.Arabic}</div>
+                        </div>
+                        <hr></hr>
+                        <div className="commentary-detail">{line.commentary}</div>
+                        <hr></hr>
+                        <div className="rootword-detail">Arabic Root Word Breakdown: {line.rootwords}</div>
+                    </div>
 
-            )}
+                )}
+                        <div className="container">
+
+                        {showEditor && (
+          <div className="button-list">
             <button onClick={handleEditClick}>{isEditing ? 'Save' : 'Edit'}</button>
             <button onClick={handleDeleteClick}>Delete</button>
             <button onClick={handleMoveUp}>Move Up</button>
             <button onClick={handleMoveDown}>Move Down</button>
+          </div>
+        )}
+            </div>
         </div>
     );
 };
