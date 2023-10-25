@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlusCircle } from '@fortawesome/free-solid-svg-icons';
 
 const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCreating, setIsCreating, showArabic }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,7 +17,7 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
   };
 
   return (
-    <div className={`line-list ${isMenuOpen ? 'open' : ''}`}>
+    <div>
       <div className="burger-menu" onClick={handleMenuToggle}>
         <div className="burger-bar" />
         <div className="burger-bar" />
@@ -23,12 +25,18 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
       </div>
       <div className="content">
         <h1>Text</h1>
-   
-        
+        {!isCreating && (
+              <FontAwesomeIcon icon={faPlusCircle}
+                onClick={handleCreateLine} style={{
+                  cursor: 'pointer',
+                }}>Create Line</FontAwesomeIcon > 
+            )}
+
         {error ? (
           <p>Error: {error}</p>
         ) : (
           <div>
+            
             <ul>
               {lines.map((line) => (
                 <li
@@ -36,6 +44,11 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
                   onClick={() => {
                     onSelectLine(line);
                     setIsMenuOpen(false);
+                    const element = document.getElementById(line.id);
+                    // Scroll to the element
+                    if (element) {
+                      element.scrollIntoView({ behavior: "smooth" });
+                    }
                   }}
                   style={{
                     fontWeight:
@@ -50,9 +63,7 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
                 </li>
               ))}
             </ul>
-            {!isCreating && (
-              <button onClick={handleCreateLine}>Create Line</button>
-            )}
+
           </div>
         )}
       </div>

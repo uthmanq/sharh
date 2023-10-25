@@ -44,24 +44,52 @@
     },
     {
       "id": "f7ba3601-0be4-407a-959f-d51291e3532f",
-      "Arabic": "و ينقسم إلى ثلاثة أقسام:",
-      "English": "It is divided into three categories:",
+      "Arabic": "وينقسم إلى ثلاثة أقسام: شرعيّ وعاديّ وعقليّ.",
+      "English": "It is divided into three types: legal, empirical, and rational.",
       "commentary": "None",
       "rootwords": "None"
     },
     {
-      "id": "8051d870-ade0-4bf5-b26f-590825a4454e",
-      "Arabic": "adfdasfda",
-      "English": "asdfadsf",
-      "commentary": "fsdfsdf",
-      "rootwords": "sdfsdfsdfsdf"
+      "id": "cd8eec57-a1b3-4e7c-9bb3-e7ecbea92430",
+      "Arabic": "فالشّرعيّ: هو خطاب الله تعالى المتعلّق بأفعال المكلّفين بالطّلب أو الإباحة أو الوضع لهما.",
+      "English": "A legal judgement: is the Address  of Allah pertaining to the actions of the legally accountable by a request, permission, or a stipulation for either of them.",
+      "commentary": "None",
+      "rootwords": "None"
     },
     {
-      "id": "20207088-ef4b-4d0c-9b75-95a48a6ddc27",
-      "Arabic": "dsfsdfsdf",
-      "English": "sdfsdf",
-      "commentary": "sdfsdfds",
-      "rootwords": "sdfsdfsdf"
+      "id": "f904ecc5-3606-44c2-8c5e-7f2084099a20",
+      "Arabic": "و يدخل في الطّلب أربعةٌ: الإيجاب والنّدب والتّحريم  والكراهة.",
+      "English": "A request includes four: obligation, recommendation, prohibition, and discouragement.",
+      "commentary": "None",
+      "rootwords": "None"
+    },
+    {
+      "id": "ab36f227-6792-4765-8092-7b269be46d45",
+      "Arabic": "فالإيجاب: وهو طلب الفعل طلبا جازما كالإيمان بالله وبرسله وكقواعد الإسلام الخمس.",
+      "English": "An obligation: is the firm request of an action, such as faith in Allah and His Messengers, and the 5 pillars of Islam, and the likes.",
+      "commentary": "None",
+      "rootwords": "None"
+    },
+    {
+      "id": "b95d3891-80f7-4ea4-86d6-a605ba5e944d",
+      "Arabic": "والندب: وهو طلب الفعل طلبا غير جازم كصلاة الفجر ونحوها.",
+      "English": "A recommendation: is a request of an action with a request that is not firm, such as the [sunnah] prayer of Fajr, and the likes.",
+      "commentary": "None",
+      "rootwords": "None"
+    },
+    {
+      "id": "d2cf87bb-d160-44da-a9d0-9ff72f85560f",
+      "Arabic": "والتّحريم: وهو طلب الكفّ عن الفعل طلبا جازما كشرب الخمر والزّنا ونحوها.",
+      "English": "A prohibition: is a firm request to abstain from an action, such as drinking wine, committing adultery, and the likes.",
+      "commentary": "None",
+      "rootwords": "None"
+    },
+    {
+      "id": "3729ff1d-d670-49b2-9e7c-456bfc0c6887",
+      "Arabic": "والكراهة: وهي طلب الكفّ عن الفعل طلبا غير جازم كالقراءةِ في الرّكوعِ و السّجودِ و نحوهما.",
+      "English": "Disliking: is a request to abstain from an action with a request that is not firm, such as recitation during ruku’ or sujud, and the likes.",
+      "commentary": "None",
+      "rootwords": "None"
     }
   ]
 }

@@ -10,13 +10,21 @@ body {
   flex-direction: row;
   height: 100vh;
 }
-
+.burger-menu-icon {
+  float: left;
+  margin-top: 10px;
+  margin-left: 10px;
+}
 .line-list {
   flex-basis: 500px;
   flex-shrink: 0;
   background-color: #fff;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  align-items: flex-start;
   display: flex;
   flex-direction: column;
   overflow-y: scroll;
@@ -143,6 +151,13 @@ button {
   cursor: pointer;
   transition: background-color 0.3s;
 }
+.close-button {
+  position: absolute;
+  top: 30px;
+  left: 240px;
+  border: none;
+  cursor: pointer;
+}
 
 button:hover {
   background-color: #4cae4c;
@@ -212,6 +227,22 @@ button:active {
   display: inline-block;
   width: 60px;
   height: 34px;
+  margin-right: 10px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
 }
 
 /* Hide default HTML checkbox */
@@ -230,30 +261,27 @@ button:active {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  -webkit-transition: 0.4s;
   transition: 0.4s;
 }
 
 .slider:before {
   position: absolute;
-  content: '';
+  content: "";
   height: 26px;
   width: 26px;
-  left: 4px;
-  bottom: 4px;
+  left: 4px;  /* Adjusted to match the width of the slider */
+  top: 50%;   /* Centered vertically */
+  transform: translateY(-50%);  /* Offset for centering */
   background-color: white;
-  -webkit-transition: 0.4s;
   transition: 0.4s;
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #2196f3;
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  transform: translate(26px, -50%); /* Added horizontal translation for the checked state */
 }
 
 /* Rounded sliders */
@@ -316,6 +344,31 @@ hr {
   margin-top: 20px;
   margin-bottom: 20px;
   width: 100%;
+}
+
+.settings-tray {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 260px;
+  box-shadow: 1px 1px 100px 10px rgba(0, 0, 0, 0.25);
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-200px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 @media (max-width: 768px) {
   .line-list {
