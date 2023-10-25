@@ -1,0 +1,107 @@
+{
+  "books": [
+    {
+      "id": "eea7ab6a-912e-475c-9e4c-778234b5b578",
+      "title": "The Great Gatsby",
+      "author": "F. Scott Fitzgerald",
+      "publishedYear": 1925,
+      "metadata": {
+        "genre": "Tragedy",
+        "language": "English"
+      }
+    },
+    {
+      "id": "e2a39d28-dfb8-4292-aee8-106afcd7dfd2",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "237ec157-9816-45e6-8f6b-a50cfab0d72a",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "5f86b76f-dcfb-49e3-871b-25f3dc71455e",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "14e0e7ae-165a-4f3e-a34a-584350edbc79",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "16a3dc95-c35b-4bcd-9903-ba7a20a609c6",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "558c3a03-613a-46b7-a8f3-d783c834921e",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "35906295-30d1-45fa-b363-5dce86315057",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "90d68dc4-4a82-4a92-bf50-7790824ed698",
+      "title": "Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      }
+    },
+    {
+      "id": "fc54c002-cf60-4540-9a5f-8de1c5e2d84e",
+      "title": "Sharh Al-Waraqat",
+      "author": "Al-Juwayni",
+      "metadata": {
+        "genre": "Usul",
+        "language": "Arabic"
+      },
+      "lines": [
+        {
+          "id": "990df011-d3ec-4aa3-b7cd-5bd482fe3408",
+          "Arabic": "بسم الله الرحمن الرحيم",
+          "English": "In the name of Allah, the Most Gracious, the Most Merciful"
+        },
+        {
+          "id": "e3e71a4a-3bc5-417e-9699-eb7b1db1dc3a",
+          "Arabic": "asdasdasdasdasd بسم الله الرحمن الرحيم",
+          "English": "In the name of Allah, the Most Gracious, the Most Merciful"
+        }
+      ]
+    }
+  ]
+}
