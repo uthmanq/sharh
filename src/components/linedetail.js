@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCommentaryActive, isRootWordActive }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedLine, setEditedLine] = useState(line || {});
     const [originalId, setOriginalId] = useState(line ? line.id : '');
-
+    const { bookid } = useParams(); // Access the id parameter
+    console.log(bookid)
 
     useEffect(() => {
         setEditedLine(line || {});
@@ -13,12 +15,12 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
 
     const handleEditClick = () => {
         if (isEditing) {
-            fetch(`http://localhost:3000/lines/${originalId}`, {
+            fetch(`http://localhost:3000/books/${bookid}/lines/${originalId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(editedLine),
+                body: JSON.stringify({updatedLine :editedLine}),
             })
                 .then((response) => {
                     if (!response.ok) {
@@ -41,7 +43,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     };
 
     const handleDeleteClick = () => {
-        fetch(`http://localhost:3000/lines/${line.id}`, {
+        fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}`, {
             method: 'DELETE',
         })
             .then((response) => {
@@ -61,7 +63,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveUp = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index > 0) {
-            fetch(`http://localhost:3000/lines/${line.id}/move`, {
+            fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -87,7 +89,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveDown = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index < lines.length - 1) {
-            fetch(`http://localhost:3000/lines/${line.id}/move`, {
+            fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
