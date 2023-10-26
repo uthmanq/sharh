@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await fetch('http://localhost:3000/books');
+        const response = await fetch(`${baseUrl}/books`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

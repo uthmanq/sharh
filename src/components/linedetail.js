@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCommentaryActive, isRootWordActive }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -15,7 +16,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
 
     const handleEditClick = () => {
         if (isEditing) {
-            fetch(`http://localhost:3000/books/${bookid}/lines/${originalId}`, {
+            fetch(`${baseUrl}/books/${bookid}/lines/${originalId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -43,7 +44,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     };
 
     const handleDeleteClick = () => {
-        fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}`, {
+        fetch(`${baseUrl}/books/${bookid}/lines/${line.id}`, {
             method: 'DELETE',
         })
             .then((response) => {
@@ -63,7 +64,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveUp = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index > 0) {
-            fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}/move`, {
+            fetch(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

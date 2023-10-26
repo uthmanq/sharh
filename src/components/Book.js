@@ -6,6 +6,7 @@ import SettingsMenu from './settingsmenu'; // Import SettingsMenu
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const Book = () => {
   const [selectedLine, setSelectedLine] = useState(null);
@@ -71,7 +72,7 @@ const Book = () => {
       ? lines.findIndex((line) => line.id === selectedLine.id) + 1
       : lines.length;
 
-    fetch(`http://localhost:3000/books/${bookid}/lines/`, {
+    fetch(`${baseUrl}/books/${bookid}/lines/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +100,7 @@ const Book = () => {
 
   //Get All Lines in a Book
   const fetchLines = () => {
-    fetch(`http://localhost:3000/books/${bookid}/lines`)
+    fetch(`${baseUrl}/books/${bookid}/lines`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
