@@ -36,11 +36,7 @@ app.get('/books', (req, res) => {
 //Create a New Book
 app.post('/books', (req, res) => {
     const newBook = { id: uuidv4(), ...req.body.newBook, lines: [] };
-<<<<<<< HEAD
-    if (!newBook  || !newBook.title || !newBook.author) {
-=======
     if (!newBook || !newBook.title || !newBook.author) {
->>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -76,8 +72,6 @@ app.post('/books', (req, res) => {
     });
 });
 
-<<<<<<< HEAD
-=======
 app.get('/books/:bookId', (req, res) => {
     const bookId = req.params.bookId;
 
@@ -97,7 +91,6 @@ app.get('/books/:bookId', (req, res) => {
     });
 });
 
->>>>>>> v2
 app.get('/books/:bookId/lines', (req, res) => {
     const bookId = req.params.bookId;
 
@@ -121,11 +114,7 @@ app.post('/books/:bookId/lines', (req, res) => {
     const bookId = req.params.bookId;
     const newLine = { id: uuidv4(), ...req.body.newLine };
 
-<<<<<<< HEAD
-    if (!newLine || !newLine.Arabic || !newLine.English ) {
-=======
     if (!newLine || !newLine.Arabic || !newLine.English) {
->>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
 
@@ -181,19 +170,12 @@ app.get('/books/:bookId/lines/:lineId', (req, res) => {
 });
 
 app.put('/books/:bookId/lines/:lineId', (req, res) => {
-<<<<<<< HEAD
-=======
     console.log(req.body)
->>>>>>> v2
     const bookId = req.params.bookId;
     const lineId = req.params.lineId;
     const updatedLine = req.body.updatedLine;
 
-<<<<<<< HEAD
-    if (!updatedLine || !updatedLine.Arabic || !updatedLine.English || !updatedLine.commentary || !updatedLine.rootwords) {
-=======
     if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
->>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
 
@@ -225,8 +207,6 @@ app.put('/books/:bookId/lines/:lineId', (req, res) => {
     });
 });
 
-<<<<<<< HEAD
-=======
 //Move Line
 app.put('/books/:bookId/lines/:index/move', (req, res) => {
     const fromIndex = parseInt(req.body.fromIndex);
@@ -273,7 +253,6 @@ app.put('/books/:bookId/lines/:index/move', (req, res) => {
     });
 });
 
->>>>>>> v2
 app.delete('/books/:bookId/lines/:lineId', (req, res) => {
     const bookId = req.params.bookId;
     const lineId = req.params.lineId;

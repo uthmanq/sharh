@@ -173,7 +173,7 @@ app.delete('/lines/:id', (req, res) => {
 });
 
 app.put('/lines/:index/move', (req, res) => {
-    const fromIndex = parseInt(req.body.fromIndex);
+    const fromIndex = parseInt(req.body.index);
     const toIndex = parseInt(req.body.toIndex);
 
     if (isNaN(fromIndex) || isNaN(toIndex)) {
