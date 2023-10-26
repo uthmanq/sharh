@@ -1,6 +1,7 @@
 {
   "books": [
     {
+<<<<<<< HEAD
       "id": "eea7ab6a-912e-475c-9e4c-778234b5b578",
       "title": "The Great Gatsby",
       "author": "F. Scott Fitzgerald",
@@ -67,10 +68,15 @@
     {
       "id": "35906295-30d1-45fa-b363-5dce86315057",
       "title": "Al-Waraqat",
+=======
+      "id": "47d586b5-3c41-48bc-bda3-3b98654f0ccd",
+      "title": "Sharh Al-Waraqat",
+>>>>>>> v2
       "author": "Al-Juwayni",
       "metadata": {
         "genre": "Usul",
         "language": "Arabic"
+<<<<<<< HEAD
       }
     },
     {
@@ -88,10 +94,52 @@
       "author": "Al-Juwayni",
       "metadata": {
         "genre": "Usul",
+=======
+      },
+      "lines": [
+        {
+          "id": "4c008744-ef5d-4457-83b2-7e404a1b430b",
+          "Arabic": "بسم الله الرحمن الرحيم",
+          "English": "In the name of Allah, the Most Gracious, the Most Merciful",
+          "commentary": "",
+          "rootwords": "asdfasdfasdf"
+        },
+        {
+          "id": "479dd9be-6d40-4f7b-9a70-bcf98a58e568",
+          "Arabic": "asdfasdf",
+          "English": "asdfasdf",
+          "commentary": "asdfasdf",
+          "rootwords": "asdfasdf"
+        },
+        {
+          "id": "3648f220-d7e1-4445-99c1-d315d17b46e0",
+          "Arabic": "Test 1",
+          "English": "Test 1"
+        }
+      ]
+    },
+    {
+      "id": "a4b97b64-df52-4c4e-86f9-90dd1bd4955a",
+      "title": "Mukhtasar Khalil",
+      "author": "Khalil ibn Ishaq al-Jundi",
+      "metadata": {
+        "genre": "Maliki Fiqh",
+        "language": "Arabic"
+      },
+      "lines": []
+    },
+    {
+      "id": "b1227f04-e8b4-4687-b3d2-c489c667a6f1",
+      "title": "Aqida Al-Tahawiyya",
+      "author": "Abu Ja'far Al-Tahawi",
+      "metadata": {
+        "genre": "Aqida",
+>>>>>>> v2
         "language": "Arabic"
       },
       "lines": [
         {
+<<<<<<< HEAD
           "id": "990df011-d3ec-4aa3-b7cd-5bd482fe3408",
           "Arabic": "بسم الله الرحمن الرحيم",
           "English": "In the name of Allah, the Most Gracious, the Most Merciful"
@@ -100,6 +148,69 @@
           "id": "e3e71a4a-3bc5-417e-9699-eb7b1db1dc3a",
           "Arabic": "asdasdasdasdasd بسم الله الرحمن الرحيم",
           "English": "In the name of Allah, the Most Gracious, the Most Merciful"
+=======
+          "id": "57b08fe8-ccc3-4291-9477-ce18aebd2650",
+          "Arabic": "بسم الله الرحمن الرحيم وبه نستعين الحمد لله رب العالمين",
+          "English": "In the name of Allah, the Gracious, the Merciful, from whom we seek help. All praise is due to Allah, the Lord of the worlds.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "0673b654-95f8-40ca-aa48-c9c07fc8d28e",
+          "Arabic": "هذا ذكر بيان عقيدة أهل السنة والجماعة على مذهب فقهاء الملة أبي حنيفة النعمان بن ثابت الكوفي وأبي يوسف يعقوب بن إبراهيم الأنصاري وأبي عبدالله محمد بن الحسن الشيباني رضوان الله عليهم أجمعين وما يعتقدون من أصول الدين ويدينون به رب العالمين‏",
+          "English": "This is a clear presentation of the creed of Ahl al-Sunnah wal Jama’ah, according to the doctrine of the jurists of the religion, Abu Hanifah al-Nu’man ibn Thabit al-Kufi, Abu Yusuf Ya’qub ibn Ibrahim al-Ansari and Abu Abdullah Muhammad ibn al-Hasan al-Shaybani, may Allah be pleased with them all, and what they believe regarding the fundamentals of the religion and their faith in the Lord of the worlds.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "8a626e21-2a07-4302-b9de-50fd0836cfc6",
+          "Arabic": "التَّوْحِيدُ",
+          "English": "Monotheism",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "09d7a608-e16c-4699-9e03-2073ca471178",
+          "Arabic": " نَقُولُ فِي تَوْحِيدِ اللَّهِ مُعْتَقِدِينَ بِتَوْفِيقِ اللَّهِ إِنَّ اللَّهَ وَاحِدٌ لَا شَرِيكَ لَهُ",
+          "English": "We say about the oneness of Allah, believing in the guidance of Allah, that Allah is one without any partner.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "bd01f8ab-ef62-49aa-bd10-611c30c6ae25",
+          "Arabic": "وَلَا شَيْءَ مِثْلُهُ",
+          "English": "There is nothing like Him.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "0d7f553c-8f94-4cb0-bbbc-2f59310f6d61",
+          "Arabic": " وَلَا شَيْءَ يُعْجِزُهُ",
+          "English": "There is nothing that can weaken Him.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "8657080f-9e92-4a0e-a91d-556f9a363d1d",
+          "Arabic": "وَلَا إِلَهَ غَيْرُهُ",
+          "English": "There is nothing worthy of worship but Him.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "aef44c0e-11cb-4642-b965-1bbecdc643a9",
+          "Arabic": "قَدِيمٌ بِلَا ابْتِدَاءٍ دَائِمٌ بِلَا انْتِهَاءٍ",
+          "English": "He is the eternal without a beginning and enduring without end.",
+          "commentary": "",
+          "rootwords": ""
+        },
+        {
+          "id": "b76cfd45-06b6-4815-be93-07fa767b4f07",
+          "Arabic": "لا يَفْنَى وَلا يَبِيدُ",
+          "English": "He will never perish, nor come to an end.",
+          "commentary": "",
+          "rootwords": ""
+>>>>>>> v2
         }
       ]
     }

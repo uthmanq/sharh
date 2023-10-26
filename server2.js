@@ -36,7 +36,11 @@ app.get('/books', (req, res) => {
 //Create a New Book
 app.post('/books', (req, res) => {
     const newBook = { id: uuidv4(), ...req.body.newBook, lines: [] };
+<<<<<<< HEAD
     if (!newBook  || !newBook.title || !newBook.author) {
+=======
+    if (!newBook || !newBook.title || !newBook.author) {
+>>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -72,6 +76,28 @@ app.post('/books', (req, res) => {
     });
 });
 
+<<<<<<< HEAD
+=======
+app.get('/books/:bookId', (req, res) => {
+    const bookId = req.params.bookId;
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).send('Internal Server Error');
+        } else {
+            const cache = JSON.parse(data);
+            const book = cache.books.find(b => b.id === bookId);
+            if (!book) {
+                res.status(404).send('Not Found: No book with the given ID exists');
+            } else {
+                res.header('Content-Type', 'application/json');
+                res.send(JSON.stringify(book));
+            }
+        }
+    });
+});
+
+>>>>>>> v2
 app.get('/books/:bookId/lines', (req, res) => {
     const bookId = req.params.bookId;
 
@@ -95,7 +121,11 @@ app.post('/books/:bookId/lines', (req, res) => {
     const bookId = req.params.bookId;
     const newLine = { id: uuidv4(), ...req.body.newLine };
 
+<<<<<<< HEAD
     if (!newLine || !newLine.Arabic || !newLine.English ) {
+=======
+    if (!newLine || !newLine.Arabic || !newLine.English) {
+>>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
 
@@ -151,11 +181,19 @@ app.get('/books/:bookId/lines/:lineId', (req, res) => {
 });
 
 app.put('/books/:bookId/lines/:lineId', (req, res) => {
+<<<<<<< HEAD
+=======
+    console.log(req.body)
+>>>>>>> v2
     const bookId = req.params.bookId;
     const lineId = req.params.lineId;
     const updatedLine = req.body.updatedLine;
 
+<<<<<<< HEAD
     if (!updatedLine || !updatedLine.Arabic || !updatedLine.English || !updatedLine.commentary || !updatedLine.rootwords) {
+=======
+    if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
+>>>>>>> v2
         return res.status(400).send('Bad Request: Missing required fields');
     }
 
@@ -187,6 +225,55 @@ app.put('/books/:bookId/lines/:lineId', (req, res) => {
     });
 });
 
+<<<<<<< HEAD
+=======
+//Move Line
+app.put('/books/:bookId/lines/:index/move', (req, res) => {
+    const fromIndex = parseInt(req.body.fromIndex);
+    const toIndex = parseInt(req.body.toIndex);
+    const bookId = req.params.bookId;
+
+    //console.log("from Index is ", fromIndex)
+    //console.log(req.body)
+    if (isNaN(fromIndex) || isNaN(toIndex)) {
+        //console.log("Indices are not integers")
+        return res.status(400).send('Bad Request: Indices must be integers');
+    }
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).send('Internal Server Error');
+        } else {
+            const cache = JSON.parse(data);
+            const book = cache.books.find(b => b.id === bookId);
+            if (!book) {
+                // console.log("Book does not exist")
+                res.status(404).send('Not Found: No book with the given ID exists');
+            }
+            else {
+                // console.log("Book exists")
+
+                if (fromIndex < 0 || fromIndex >= book.lines.length || toIndex < 0 || toIndex >= book.lines.length) {
+                   // console.log("Bad Request, indices out of range. From index: ", fromIndex, " to index ", toIndex, "cache lines length is ", book.lines.length)
+                    return res.status(400).send('Bad Request: Indices out of range');
+                }
+
+                const [movedLine] = book.lines.splice(fromIndex, 1);
+                book.lines.splice(toIndex, 0, movedLine);
+
+                fs.writeFile(filePath, JSON.stringify(cache, null, 2), 'utf8', (err) => {
+                    if (err) {
+                        res.status(500).send('Internal Server Error');
+                    } else {
+                        res.status(200).json('Line moved successfully');
+                    }
+                });
+            }
+        }
+    });
+});
+
+>>>>>>> v2
 app.delete('/books/:bookId/lines/:lineId', (req, res) => {
     const bookId = req.params.bookId;
     const lineId = req.params.lineId;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlusCircle } from '@fortawesome/free-solid-svg-icons';
 
-const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCreating, setIsCreating, showArabic }) => {
+const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCreating, setIsCreating, showArabic, bookTitle }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
 
@@ -24,7 +24,7 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
         <div className="burger-bar" />
       </div>
       <div className="content">
-        <h1>Text</h1>
+        <h1 className="detail-title">{bookTitle}</h1>
         {!isCreating && (
               <FontAwesomeIcon icon={faPlusCircle}
                 onClick={handleCreateLine} style={{

@@ -10,6 +10,8 @@ import { useParams } from 'react-router-dom';
 const Book = () => {
   const [selectedLine, setSelectedLine] = useState(null);
   const [lines, setLines] = useState([]);
+  const [bookTitle, setTitle] = useState([]);
+
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showEditor, setShowEditor] = useState(true);
@@ -62,12 +64,14 @@ const Book = () => {
   const handleSettingsButtonClick = () => {
     setShowSettingsMenu(!showSettingsMenu); // toggle the visibility of the settings menu
   };
+
+  //Post New Line to Book
   const handleSubmit = () => {
     const position = selectedLine
       ? lines.findIndex((line) => line.id === selectedLine.id) + 1
       : lines.length;
 
-    fetch('http://localhost:3000/lines', {
+    fetch(`http://localhost:3000/books/${bookid}/lines/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -93,8 +97,9 @@ const Book = () => {
       });
   };
 
+  //Get All Lines in a Book
   const fetchLines = () => {
-    fetch('http://localhost:3000/lines')
+    fetch(`http://localhost:3000/books/${bookid}/lines`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -102,6 +107,7 @@ const Book = () => {
         return response.json();
       })
       .then((data) => {
+        setTitle(data.title);
         setLines(data.lines);
       })
       .catch((error) => {
@@ -152,6 +158,7 @@ const Book = () => {
             isCreating={isCreating}
             setIsCreating={setIsCreating}
             showArabic={showArabic}
+            bookTitle={bookTitle}
           />
         </div>
         <div className="line-details-container">
