@@ -5,6 +5,7 @@ import FormComponent from './formcomponent';
 import SettingsMenu from './settingsmenu'; // Import SettingsMenu
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
+import { faCogs } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -15,14 +16,19 @@ const Book = () => {
 
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [showEditor, setShowEditor] = useState(true);
+  const [showEditor, setShowEditor] = useState(false);
   const [showArabic, setShowArabic] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // state to control the visibility of the settings menu
   const [isBorderActive, setIsBorderActive] = useState(true);
   const [isCommentaryActive, setIsCommentaryActive] = useState(true);
-  const [isRootWordActive, setIsRootWordActive] = useState(true);
+  const [isRootWordActive, setIsRootWordActive] = useState(false);
   const { bookid } = useParams(); // Access the id parameter
+  const [isTrayOpen, setIsTrayOpen] = useState(true);
 
+
+  const toggleTray = () => {
+    setIsTrayOpen(!isTrayOpen);
+  };
   const handleArabicToggle = () => {
     setShowArabic(!showArabic);
   };
@@ -126,12 +132,12 @@ const Book = () => {
     <div className="app">
 
       <div className="app-container">
-        <div className="line-list">
-          <FontAwesomeIcon className="burger-menu-icon"
-            icon={faBars}
+        <div className="line-list" style={{display: isTrayOpen ? 'block' : 'none'}}>
+          <FontAwesomeIcon className="burger-menu-icon settingsIcon"
+            icon={faCogs}
             onClick={handleSettingsButtonClick}
             style={{
-              cursor: 'pointer', top: '10px', left: '10px',
+              cursor: 'pointer', top: '10px', left: '15px', position:'absolute'
             }} />
           {
             showSettingsMenu &&
@@ -160,9 +166,20 @@ const Book = () => {
             setIsCreating={setIsCreating}
             showArabic={showArabic}
             bookTitle={bookTitle}
+            showEditor={showEditor}
+
           />
         </div>
         <div className="line-details-container">
+        <div className="header" >
+                <h1 className="site-title" style={{textAlign: "center",}}>{bookTitle}</h1>
+                <FontAwesomeIcon className="burger-menu-icon"
+            icon={faBars}
+            onClick={toggleTray}
+            style={{
+              cursor: 'pointer', bottom: '50px', left: '10px', position:'relative'
+            }} />
+            </div>
           {
             isCreating
               ? <FormComponent

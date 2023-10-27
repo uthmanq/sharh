@@ -3,6 +3,7 @@ import React from 'react';
 const FormComponent = ({ newLine, handleInputChange, handleCancel, handleSubmit }) => {
   return (
     <div className="create-line-form-container">
+      <h3>Create New Line</h3>
       <form className="create-line-form">
         <div className="create-line-form-group">
           <label>

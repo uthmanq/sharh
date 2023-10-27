@@ -90,7 +90,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveDown = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index < lines.length - 1) {
-            fetch(`http://localhost:3000/books/${bookid}/lines/${line.id}/move`, {
+            fetch(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -121,7 +121,10 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     }
 
     return (
+        
         <div className="line-details">
+
+
             {isEditing ? (
                 <div>
                     <label>

@@ -91,8 +91,17 @@ li {
   border-radius: 4px;
   transition: background-color 0.3s;
 }
+td {
+  padding: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
 
 li:hover {
+  background-color: #e0e0e0;
+}
+td:hover {
   background-color: #e0e0e0;
 }
 
@@ -158,7 +167,9 @@ button {
   border: none;
   cursor: pointer;
 }
-
+h1{
+  padding-top:0px;
+}
 button:hover {
   background-color: #4cae4c;
 }
@@ -357,8 +368,21 @@ hr {
   width: 260px;
   box-shadow: 1px 1px 100px 10px rgba(0, 0, 0, 0.25);
   animation: slideIn 0.3s ease-in-out;
-}
+  z-index: 400;   
 
+}
+.settingsIcon{
+  cursor: pointer;
+   top: 27px;
+    left: 10px;
+     position:absolute;
+
+}
+.header{
+   position: sticky; 
+   top: 0; left: 0; right: 0; background-color: #fff; padding: '.1%'; border-bottom:1px solid rgb(155, 155, 155);
+   z-index: 300;   
+}
 @keyframes slideIn {
   from {
     transform: translateX(-200px);
@@ -369,22 +393,20 @@ hr {
     opacity: 1;
   }
 }
-@media (max-width: 768px) {
+/* Styling for mobile */
+@media only screen and (max-width: 767px) {
   .line-list {
-    display: none;
-  }
-
-  .burger-menu {
-    display: flex;
-  }
-
-  .line-list.open {
-    display: block;
+    display: none;  /* Hide the component on mobile */
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 250px;
-    height: 100vh;
+    padding-top:100px;
   }
-  
+  .settingsIcon{
+    position:relative;
+    right:12px;
+    top:27px;
+  }
+
+  .tray {
+    display: block; /* Show the tray on mobile */
+  }
 }
