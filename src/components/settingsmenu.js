@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faX } from '@fortawesome/free-solid-svg-icons';
 
-const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, showArabic, closeSettingsMenu, isBorderActive, handleBorderToggle, isCommentaryActive, handleCommentaryToggle, handleRootWordToggle,isRootWordActive }) => {
+const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, showArabic, closeSettingsMenu, isBorderActive, handleBorderToggle, isCommentaryActive, handleCommentaryToggle, handleRootWordToggle, isRootWordActive, isAuthenticated }) => {
     return (
         <div className="settings-menu">
 
@@ -13,16 +13,19 @@ const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, show
                     cursor: 'pointer',
                 }} />
             <h2>Settings</h2>
-            <label className="switch">
-                <input
-                    type="checkbox"
-                    checked={showEditor}
-                    onChange={handleEditorToggle}
-                />
-                <div className="slider round" />
-            </label>
-            <span>Show Editor</span>
-            <br />
+            {isAuthenticated && (
+                <div>
+                    <label className="switch">
+                        <input
+                            type="checkbox"
+                            checked={showEditor}
+                            onChange={handleEditorToggle}
+                        />
+                        <div className="slider round" />
+                    </label>
+                    <span>Show Editor</span>
+                    <br /></div>
+            )}
             <label className="switch">
                 <input
                     type="checkbox"
@@ -42,7 +45,7 @@ const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, show
                 <span className="slider round" />
             </label>
             <span>Show Round Borders</span>
-            <br/>
+            <br />
             <label className="switch">
                 <input
                     type="checkbox"
@@ -52,7 +55,7 @@ const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, show
                 <span className="slider round" />
             </label>
             <span>Show Commentary</span>
-            <br/>
+            <br />
             <label className="switch">
                 <input
                     type="checkbox"
@@ -62,7 +65,7 @@ const SettingsMenu = ({ handleEditorToggle, handleArabicToggle, showEditor, show
                 <span className="slider round" />
             </label>
             <span>Show Root Words</span>
-            <br/>
+            <br />
         </div>
     );
 };

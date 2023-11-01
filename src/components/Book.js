@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { faCogs } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
+import fetchWithAuth from '../functions/FetchWithAuth';
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const Book = () => {
@@ -24,7 +25,12 @@ const Book = () => {
   const [isRootWordActive, setIsRootWordActive] = useState(false);
   const { bookid } = useParams(); // Access the id parameter
   const [isTrayOpen, setIsTrayOpen] = useState(true);
-
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  useEffect(() => {
+    // Check if the user is authenticated when the app loads
+    const token = localStorage.getItem('authToken');
+    setIsAuthenticated(!!token);
+  }, []);
 
   const toggleTray = () => {
     setIsTrayOpen(!isTrayOpen);
@@ -78,7 +84,7 @@ const Book = () => {
       ? lines.findIndex((line) => line.id === selectedLine.id) + 1
       : lines.length;
 
-    fetch(`${baseUrl}/books/${bookid}/lines/`, {
+    fetchWithAuth(`${baseUrl}/books/${bookid}/lines/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -153,6 +159,7 @@ const Book = () => {
                 isCommentaryActive={isCommentaryActive}
                 handleRootWordToggle={handleRootWordToggle}
                 isRootWordActive={isRootWordActive}
+                isAuthenticated={isAuthenticated}
               />
             </div>
           }

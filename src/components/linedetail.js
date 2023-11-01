@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import fetchWithAuth from '../functions/FetchWithAuth';
+
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCommentaryActive, isRootWordActive }) => {
@@ -16,19 +18,15 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
 
     const handleEditClick = () => {
         if (isEditing) {
-            fetch(`${baseUrl}/books/${bookid}/lines/${originalId}`, {
+            fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${originalId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    
                 },
                 body: JSON.stringify({updatedLine :editedLine}),
             })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                
                 .then((data) => {
                     setIsEditing(false);
                     fetchLines();  // Trigger re-fetch of data after successful edit
@@ -44,7 +42,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     };
 
     const handleDeleteClick = () => {
-        fetch(`${baseUrl}/books/${bookid}/lines/${line.id}`, {
+        fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${line.id}`, {
             method: 'DELETE',
         })
             .then((response) => {
@@ -64,7 +62,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveUp = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index > 0) {
-            fetch(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
+            fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -90,7 +88,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const handleMoveDown = () => {
         const index = lines.findIndex(l => l.id === line.id);
         if (index < lines.length - 1) {
-            fetch(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
+            fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${line.id}/move`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
