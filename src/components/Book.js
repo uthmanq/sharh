@@ -14,7 +14,6 @@ const Book = () => {
   const [selectedLine, setSelectedLine] = useState(null);
   const [lines, setLines] = useState([]);
   const [bookTitle, setTitle] = useState([]);
-
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -91,15 +90,6 @@ const Book = () => {
       },
       body: JSON.stringify({ newLine, position }),
     })
-      .then((response) => {
-        if (response.ok) {
-          return response.text();
-        } else {
-          return response.text().then((text) => {
-            throw new Error(text);
-          });
-        }
-      })
       .then((data) => {
         console.log(data);
         fetchLines(); // Fetch lines again to update the list with the new line
@@ -120,6 +110,7 @@ const Book = () => {
         return response.json();
       })
       .then((data) => {
+        console.log('book title is', data)
         setTitle(data.title);
         setLines(data.lines);
       })
@@ -142,9 +133,7 @@ const Book = () => {
           <FontAwesomeIcon className="burger-menu-icon settingsIcon"
             icon={faCogs}
             onClick={handleSettingsButtonClick}
-            style={{
-              cursor: 'pointer', top: '10px', left: '15px', position:'absolute'
-            }} />
+             />
           {
             showSettingsMenu &&
             <div className="settings-tray">

@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -17,10 +22,8 @@ function Login() {
       });
       const token = response.data.token;
       if (token) {
-        // Save the token to localStorage
         localStorage.setItem('authToken', token);
-        
-        // Optionally, redirect user to another page or update state to indicate login success
+        navigate(from, { replace: true });
       }
     } catch (error) {
       setError(error.response ? error.response.data.message : error.message);
@@ -28,7 +31,9 @@ function Login() {
   };
 
   return (
-    <div>
+    <div className="login-page">
+        <h1>Sharh</h1>
+        <h3>Login</h3>
       <form onSubmit={handleSubmit}>
         <div>
           <label>

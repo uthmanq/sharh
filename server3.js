@@ -5,14 +5,19 @@ const cors = require('cors'); // Import the cors package
 const app = express();
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const path = require('path');
 const SECRET_KEY = process.env.SECRETKEY
 const DBNAME = process.env.DBNAME
 app.use(bodyParser.json());
 app.use(cors()); // Enable CORS for all routes
+app.use(express.static(path.join(__dirname, 'build')));
+
 // Mongoose setup
 mongoose.connect(`mongodb://3.149.244.74:27017/${DBNAME}`, {
 });
 
+console.log(`mongodb://3.149.244.74:27017/${DBNAME}`, {
+});
 //Book Schema
 const bookSchema = new mongoose.Schema({
     title: String,
@@ -36,6 +41,10 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
 //POST Signup Endpoint
 app.post('/signup', async (req, res) => {
     const { username, password, email } = req.body;
@@ -179,7 +188,9 @@ app.get('/books/:bookId', async (req, res) => {
 // GET /books/:bookId/lines
 app.get('/books/:bookId/lines', async (req, res) => {
     try {
-        const book = await Book.findById(req.params.bookId, 'lines');
+        const book = await Book.findById(req.params.bookId);
+       // console.log(book)
+
         if (!book) {
             return res.status(404).send('Not Found: No book with the given ID exists');
         }
@@ -339,7 +350,7 @@ app.put('/books/:bookId/lines/:index/move', authenticateToken, async (req, res) 
     }
   });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

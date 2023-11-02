@@ -87,7 +87,6 @@ ul {
 
 li {
   padding: 1px;
-  cursor: pointer;
   border-radius: 4px;
   transition: background-color 0.3s;
 }
@@ -98,9 +97,6 @@ td {
   transition: background-color 0.3s;
 }
 
-li:hover {
-  background-color: #e0e0e0;
-}
 td:hover {
   background-color: #e0e0e0;
 }
@@ -383,6 +379,34 @@ hr {
    top: 0; left: 0; right: 0; background-color: #fff; padding: '.1%'; border-bottom:1px solid rgb(155, 155, 155);
    z-index: 300;   
 }
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column; /* Added this line */
+
+}
+
+.landing-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+}
+
+/* Style the book list */
+.book-list {
+  max-width:800px;
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  overflow: hidden;
+  display:grid;
+  align-items: center;
+
+}
 @keyframes slideIn {
   from {
     transform: translateX(-200px);
@@ -403,7 +427,7 @@ hr {
   .settingsIcon{
     position:relative;
     right:12px;
-    top:27px;
+    top:15px;
   }
 
   .tray {

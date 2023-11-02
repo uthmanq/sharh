@@ -45,12 +45,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
         fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${line.id}`, {
             method: 'DELETE',
         })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            
             .then((data) => {
                 fetchLines();  // Trigger re-fetch of data after successful delete
             })
@@ -69,13 +64,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                 },
                 body: JSON.stringify({ toIndex: index - 1, fromIndex: index }),
             })
-                .then((response) => {
-                    if (!response.ok) {
-                        console.log("from index is", index)
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+
                 .then((data) => {
                     fetchLines();  // Trigger re-fetch of data after successful move
                 })
@@ -95,12 +84,6 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                 },
                 body: JSON.stringify({ toIndex: index + 1, fromIndex: index }),
             })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
                 .then((data) => {
                     fetchLines();  // Trigger re-fetch of data after successful move
                 })
