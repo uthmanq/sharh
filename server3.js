@@ -41,10 +41,6 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
 //POST Signup Endpoint
 app.post('/signup', async (req, res) => {
     const { username, password, email } = req.body;
@@ -189,7 +185,7 @@ app.get('/books/:bookId', async (req, res) => {
 app.get('/books/:bookId/lines', async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId);
-       // console.log(book)
+        // console.log(book)
 
         if (!book) {
             return res.status(404).send('Not Found: No book with the given ID exists');
@@ -203,13 +199,14 @@ app.get('/books/:bookId/lines', async (req, res) => {
                 rootwords: line.rootwords || ""
             };
         });
-        res.json({ 
+        res.json({
             id: book._id,
             title: book.title,
             author: book.author,
             metadata: book.metadata || {},
             lines: formattedLines
-        });    } catch (err) {
+        });
+    } catch (err) {
         res.status(500).send('Internal Server Error');
     }
 });
@@ -307,10 +304,10 @@ app.delete('/books/:bookId/lines/:lineId', authenticateToken, async (req, res) =
         if (!book) {
             return res.status(404).send('Not Found: No book with the given ID exists');
         }
-        
+
         const lineId = req.params.lineId;
         book.lines.pull({ _id: lineId });
-        
+
         await book.save();
         res.status(200).json('Line deleted successfully');
     } catch (err) {
@@ -324,31 +321,36 @@ app.put('/books/:bookId/lines/:index/move', authenticateToken, async (req, res) 
     const fromIndex = parseInt(req.body.fromIndex);
     const toIndex = parseInt(req.body.toIndex);
     const bookId = req.params.bookId;
-  
+
     if (isNaN(fromIndex) || isNaN(toIndex)) {
-      return res.status(400).send('Bad Request: Indices must be integers');
+        return res.status(400).send('Bad Request: Indices must be integers');
     }
-  
+
     try {
-      const book = await Book.findById(bookId);
-      if (!book) {
-        return res.status(404).send('Not Found: No book with the given ID exists');
-      }
-  
-      if (fromIndex < 0 || fromIndex >= book.lines.length || toIndex < 0 || toIndex >= book.lines.length) {
-        return res.status(400).send('Bad Request: Indices out of range');
-      }
-  
-      const [movedLine] = book.lines.splice(fromIndex, 1);
-      book.lines.splice(toIndex, 0, movedLine);
-  
-      await book.save();
-      res.status(200).json('Line moved successfully');
+        const book = await Book.findById(bookId);
+        if (!book) {
+            return res.status(404).send('Not Found: No book with the given ID exists');
+        }
+
+        if (fromIndex < 0 || fromIndex >= book.lines.length || toIndex < 0 || toIndex >= book.lines.length) {
+            return res.status(400).send('Bad Request: Indices out of range');
+        }
+
+        const [movedLine] = book.lines.splice(fromIndex, 1);
+        book.lines.splice(toIndex, 0, movedLine);
+
+        await book.save();
+        res.status(200).json('Line moved successfully');
     } catch (err) {
-      console.log(err);
-      res.status(500).send('Internal Server Error');
+        console.log(err);
+        res.status(500).send('Internal Server Error');
     }
-  });
+});
+
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 const PORT = process.env.PORT || 80;
 app.listen(PORT, () => {
