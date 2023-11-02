@@ -13,7 +13,7 @@ app.use(cors()); // Enable CORS for all routes
 app.use(express.static(path.join(__dirname, 'build')));
 
 // Mongoose setup
-mongoose.connect(`mongodb://3.149.244.74:27017/${DBNAME}`, {
+mongoose.connect(`mongodb://localhost:27017/${DBNAME}`, {
 });
 
 console.log(`mongodb://3.149.244.74:27017/${DBNAME}`, {
