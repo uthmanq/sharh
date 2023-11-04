@@ -111,19 +111,19 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                 <div>
                     <label>
                         Arabic:
-                            <textarea type="text" value={editedLine.Arabic} className="create-line-form-group" onChange={handleChange('Arabic')} />
+                            <textarea value={editedLine.Arabic} className="edit-fields" onChange={handleChange('Arabic')} />
                     </label>
                     <label>
                         English:
-                            <textarea type="text" className="create-line-form-group" value={editedLine.English} onChange={handleChange('English')} />
+                            <textarea className="edit-fields" value={editedLine.English} onChange={handleChange('English')} />
                     </label>
                     <label>
                         Commentary:
-                            <textarea className="create-line-form-group" value={editedLine.commentary} onChange={handleChange('commentary')} />
+                            <textarea className="edit-fields" value={editedLine.commentary} onChange={handleChange('commentary')} />
                     </label>
                     <label>
                         Rootwords:
-                            <textarea type="text" className="create-line-form-group" value={editedLine.rootwords} onChange={handleChange('rootwords')} />
+                            <textarea className="edit-fields" value={editedLine.rootwords} onChange={handleChange('rootwords')} />
                     </label>
                 </div>
             ) : (
