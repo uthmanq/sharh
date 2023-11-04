@@ -134,9 +134,9 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                         <div className="arabic-detail"><ReactMarkdown>{line.Arabic}</ReactMarkdown></div>
                     </div>
                     <hr style={{display: isCommentaryActive ? "block":"none"}}></hr>
-                    <div className="commentary-detail" style={{display: isCommentaryActive ? "block":"none"}}>{line.commentary}</div>
+                    <div className="commentary-detail" style={{display: isCommentaryActive ? "block":"none"}}><ReactMarkdown>{line.commentary}</ReactMarkdown></div>
                     <hr style={{display: isRootWordActive ? "block":"none"}}></hr>
-                    <div className="rootword-detail" style={{display: isRootWordActive ? "block":"none"}}>Arabic Root Word Breakdown: {line.rootwords}</div>
+                    <div className="rootword-detail" style={{display: isRootWordActive ? "block":"none"}}><ReactMarkdown>Arabic Root Word Breakdown: {line.rootwords}</ReactMarkdown></div>
                 </div>
 
             )}
