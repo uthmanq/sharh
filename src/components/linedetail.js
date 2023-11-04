@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import fetchWithAuth from '../functions/FetchWithAuth';
+import ReactMarkdown from 'react-markdown';
 
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -129,8 +130,8 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
 
                 <div className="detail-container" style={{ border: isBorderActive ? "0px" : "2px solid #333" }} id={line.id}>
                     <div className="text-container">
-                        <div className="english-detail">{line.English}</div>
-                        <div className="arabic-detail">{line.Arabic}</div>
+                        <div className="english-detail"><ReactMarkdown>{line.English}</ReactMarkdown></div>
+                        <div className="arabic-detail"><ReactMarkdown>{line.Arabic}</ReactMarkdown></div>
                     </div>
                     <hr style={{display: isCommentaryActive ? "block":"none"}}></hr>
                     <div className="commentary-detail" style={{display: isCommentaryActive ? "block":"none"}}>{line.commentary}</div>
