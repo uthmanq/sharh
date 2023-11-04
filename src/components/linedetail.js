@@ -111,7 +111,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                 <div>
                     <label>
                         Arabic:
-                            <textarea value={editedLine.Arabic} className="edit-fields" onChange={handleChange('Arabic')} />
+                            <textarea value={editedLine.Arabic} className="edit-fields-arabic" onChange={handleChange('Arabic')} />
                     </label>
                     <label>
                         English:
