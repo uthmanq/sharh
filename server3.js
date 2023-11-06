@@ -6,6 +6,8 @@ const app = express();
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const path = require('path');
+const crypto = require('crypto');
+
 const SECRET_KEY = process.env.SECRETKEY
 const DBNAME = process.env.DBNAME
 app.use(bodyParser.json());
@@ -91,6 +93,39 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
+
+function verifyPostData(req, res, next) {
+    const signature = req.headers['x-hub-signature-256'];
+    const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
+    const digest = 'sha256=' + hmac.update(req.body).digest('hex');
+
+    if (!signature || !digest || signature !== digest) {
+        return res.status(403).send('Invalid signature');
+    }
+
+    // Signature is valid, parse the body as JSON for the next middleware
+    try {
+        req.body = JSON.parse(req.body.toString());
+    } catch (error) {
+        return res.status(400).send('Invalid JSON');
+    }
+
+    return next();
+}
+
+app.use('/CLI-update', express.raw({ type: 'application/json' }), verifyPostData);
+
+  app.post('/CLI-update', verifyPostData, (req, res) => {
+    exec('./build.sh', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          return res.status(500).send('Build script failed');
+        }
+    
+        console.log(`stdout: ${stdout}`);
+        console.error(`stderr: ${stderr}`);
+        res.status(200).send('Build script executed successfully');
+      });  });
 
 // GET /books
 app.get('/books', async (req, res) => {
