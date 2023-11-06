@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const path = require('path');
 const crypto = require('crypto');
+const { exec } = require('child_process'); // This line is important
+
 
 const SECRET_KEY = process.env.SECRETKEY
 const DBNAME = process.env.DBNAME
