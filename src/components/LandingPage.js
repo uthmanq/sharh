@@ -31,7 +31,7 @@ const LandingPage = () => {
   return (
     <div className="landing-page">
       <div className="book-list">
-        <h1>Sharh by Ummah Spot</h1>
+        <h1>Sharh App by Ummah Spot</h1>
         <p>Sharh is a project to give a new way to read Arabic texts with English translation and commentary digitally. Our core mission focuses on two aspects: </p>
         <ol>
           <li>High-quality, readable, accurate, and accessible translations of important classical Islamic texts.</li>
