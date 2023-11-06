@@ -113,19 +113,25 @@ function verifyPostData(req, res, next) {
     return next();
 }
 
-app.use('/CLI-update', express.raw({ type: 'application/json' }), verifyPostData);
 
-  app.post('/CLI-update', verifyPostData, (req, res) => {
+app.post('/CLI-update', (req, res) => {
+    // You could check for a simple secret or token if you still want some level of security
+    if (req.body.secret !== process.env.WEBHOOK_SECRET) {
+        return res.status(403).send('Invalid secret');
+    }
+
+    // Run your build script
     exec('./build.sh', (error, stdout, stderr) => {
         if (error) {
-          console.error(`exec error: ${error}`);
-          return res.status(500).send('Build script failed');
+            console.error(`exec error: ${error}`);
+            return res.status(500).send('Build script failed');
         }
-    
+        
         console.log(`stdout: ${stdout}`);
         console.error(`stderr: ${stderr}`);
         res.status(200).send('Build script executed successfully');
-      });  });
+    });
+});
 
 // GET /books
 app.get('/books', async (req, res) => {
