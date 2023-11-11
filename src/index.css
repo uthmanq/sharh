@@ -118,6 +118,8 @@ label {
   border-radius: 4px;
   box-sizing: border-box;
   transition: border-color 0.3s;
+  resize: vertical;
+  min-height: 300px;
 }
 .edit-fields-arabic{
   width: 100%;
@@ -128,6 +130,8 @@ label {
   box-sizing: border-box;
   transition: border-color 0.3s;
   direction:rtl;
+  resize: vertical;
+  min-height: 300px;
 }
 input {
   width: 100%;
