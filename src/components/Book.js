@@ -17,7 +17,7 @@ const Book = () => {
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
-  const [showArabic, setShowArabic] = useState(true);
+  const [showArabic, setShowArabic] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // state to control the visibility of the settings menu
   const [isBorderActive, setIsBorderActive] = useState(true);
   const [isCommentaryActive, setIsCommentaryActive] = useState(false);
