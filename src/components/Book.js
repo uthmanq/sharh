@@ -9,7 +9,7 @@ import { faCogs } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
 import fetchWithAuth from '../functions/FetchWithAuth';
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
+console.log('Base URL is', baseUrl)
 const Book = () => {
   const [selectedLine, setSelectedLine] = useState(null);
   const [lines, setLines] = useState([]);

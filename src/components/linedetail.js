@@ -10,7 +10,6 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
     const [editedLine, setEditedLine] = useState(line || {});
     const [originalId, setOriginalId] = useState(line ? line.id : '');
     const { bookid } = useParams(); // Access the id parameter
-    console.log(bookid)
 
     useEffect(() => {
         setEditedLine(line || {});
@@ -136,7 +135,7 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
                     <hr style={{display: isCommentaryActive ? "block":"none"}}></hr>
                     <div className="commentary-detail" style={{display: isCommentaryActive ? "block":"none"}}><ReactMarkdown>{line.commentary}</ReactMarkdown></div>
                     <hr style={{display: isRootWordActive ? "block":"none"}}></hr>
-                    <div className="rootword-detail" style={{display: isRootWordActive ? "block":"none"}}><ReactMarkdown>Arabic Root Word Breakdown: {line.rootwords}</ReactMarkdown></div>
+                    <div className="rootword-detail" style={{display: isRootWordActive ? "block":"none"}}><ReactMarkdown>{line.rootwords}</ReactMarkdown></div>
                 </div>
 
             )}

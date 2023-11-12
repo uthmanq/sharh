@@ -12,15 +12,17 @@ const { exec } = require('child_process'); // This line is important
 
 const SECRET_KEY = process.env.SECRETKEY
 const DBNAME = process.env.DBNAME
+const DBADDRESS = process.env.DBADDRESS
+
 app.use(bodyParser.json());
 app.use(cors()); // Enable CORS for all routes
 app.use(express.static(path.join(__dirname, 'build')));
 
 // Mongoose setup
-mongoose.connect(`mongodb://localhost:27017/${DBNAME}`, {
-});
+mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
+}).then(() => console.log('MongoDB Connected'));
 
-console.log(`mongodb://3.149.244.74:27017/${DBNAME}`, {
+console.log(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 });
 //Book Schema
 const bookSchema = new mongoose.Schema({
@@ -134,7 +136,18 @@ app.post('/CLI-update', (req, res) => {
         res.status(200).send('Build script executed successfully');
     });
 });
-
+app.get('/user', authenticateToken, async (req, res) => {
+    try {
+        // Assuming the JWT token contains the user's ID in the 'id' field
+        const user = await User.findById(req.user.id).select('-password'); // Exclude the password from the result
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
 // GET /books
 app.get('/books', async (req, res) => {
     try {
