@@ -17,13 +17,13 @@ const Book = () => {
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
-  const [showArabic, setShowArabic] = useState(true);
+  const [showArabic, setShowArabic] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // state to control the visibility of the settings menu
   const [isBorderActive, setIsBorderActive] = useState(true);
-  const [isCommentaryActive, setIsCommentaryActive] = useState(true);
+  const [isCommentaryActive, setIsCommentaryActive] = useState(false);
   const [isRootWordActive, setIsRootWordActive] = useState(false);
   const { bookid } = useParams(); // Access the id parameter
-  const [isTrayOpen, setIsTrayOpen] = useState(true);
+  const [isTrayOpen, setIsTrayOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   useEffect(() => {
     // Check if the user is authenticated when the app loads

@@ -11,7 +11,7 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
   return (
     <div>
       <div className="content">
-        <h2 className="detail-title">Sharh</h2>
+        <h2 className="detail-title">Contents</h2>
 
         {error ? (
           <p>Error: {error}</p>
