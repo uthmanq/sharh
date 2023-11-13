@@ -143,8 +143,8 @@ const LineDetail = ({ line, fetchLines, lines, showEditor, isBorderActive, isCom
 
                 {showEditor && (
                     <div className="button-list">
-                        <button onClick={handleEditClick}>{isEditing ? 'Save' : 'Edit'}</button>
-                        <button onClick={handleDeleteClick}>Delete</button>
+                        <button className="button-edit" onClick={handleEditClick}>{isEditing ? 'Save' : 'Edit'}</button>
+                        <button className="button-delete" onClick={handleDeleteClick}>Delete</button>
                         <button onClick={handleMoveUp}>Move Up</button>
                         <button onClick={handleMoveDown}>Move Down</button>
                     </div>

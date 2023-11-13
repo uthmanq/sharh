@@ -1,7 +1,7 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f0f0f0;
+  background-color: white;
   color: #333;
 }
 
@@ -18,7 +18,6 @@ body {
 .line-list {
   flex-basis: 500px;
   flex-shrink: 0;
-  background-color: #fff;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   padding-left: 20px;
   padding-right: 20px;
@@ -45,7 +44,6 @@ body {
   padding-right: 20px;
   padding-left: 20px;
 
-  background-color: #fff;
   overflow-y: auto;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
 }
@@ -70,7 +68,6 @@ body {
 .burger-bar {
   width: 100%;
   height: 3px;
-  background-color: #333;
   border-radius: 2px;
   transition: background-color 0.3s;
 }
@@ -174,9 +171,16 @@ button {
   border: none;
   border-radius: 4px;
   color: #fff;
-  background-color: #5cb85c;
+  background-color: hsl(210,77%,46%);
   cursor: pointer;
   transition: background-color 0.3s;
+}
+
+.button-delete {
+  background-color: hsl(0,60%,49%);
+}
+.button-edit {
+  background-color: hsl(148,70%,31%);
 }
 .close-button {
   position: absolute;
@@ -208,14 +212,12 @@ button:active {
   padding: 20px;
   border: 2px solid #333;
   border-radius: 10px;
-  background-color: #f9f9f9;
   margin: 10px;
 }
 
 .arabic-detail {
   text-align: right;
   font-size: 25px;
-  color: #4a4a4a;
   flex: 1;
   min-width: 0; /* Added to prevent flex items from overflowing */
   word-wrap: break-word; /* Added to break long words that might overflow */
@@ -229,7 +231,6 @@ button:active {
   text-align: left;
   font-family: 'Georgia', serif;
   font-size: 22px;
-  color: #4a4a4a;
   flex: 1;
   min-width: 0; /* Added to prevent flex items from overflowing */
   word-wrap: break-word; /* Added to break long words that might overflow */
@@ -239,7 +240,6 @@ button:active {
 .rootword-detail {
   font-family: 'Georgia', serif;
   font-size: 16px;
-  color: #4a4a4a;
   margin-top: 10px;
 }
 

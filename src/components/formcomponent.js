@@ -45,7 +45,7 @@ const FormComponent = ({ newLine, handleInputChange, handleCancel, handleSubmit 
           <button type="button" onClick={handleSubmit}>
             Submit
           </button>
-          <button type="button" onClick={handleCancel}>
+          <button type="button button-delete" onClick={handleCancel}>
             Cancel
           </button>
         </div>
