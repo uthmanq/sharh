@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import LineList from './linelist';
 import LineDetail from './linedetail';
 import FormComponent from './formcomponent';
@@ -8,9 +8,13 @@ import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { faCogs } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
 import fetchWithAuth from '../functions/FetchWithAuth';
+import { ThemeContext } from './ThemeContext';
+
+
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 console.log('Base URL is', baseUrl)
 const Book = () => {
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const [selectedLine, setSelectedLine] = useState(null);
   const [lines, setLines] = useState([]);
   const [bookTitle, setTitle] = useState([]);
@@ -129,75 +133,78 @@ const Book = () => {
     <div className="app">
 
       <div className="app-container">
-        <div className="line-list" style={{display: isTrayOpen ? 'block' : 'none'}}>
-          <FontAwesomeIcon className="burger-menu-icon settingsIcon"
-            icon={faCogs}
-            onClick={handleSettingsButtonClick}
-             />
-          {
-            showSettingsMenu &&
-            <div className="settings-tray">
-              <SettingsMenu
-                handleEditorToggle={handleEditorToggle}
-                handleArabicToggle={handleArabicToggle}
-                showEditor={showEditor}
-                showArabic={showArabic}
-                closeSettingsMenu={closeSettingsMenu}
-                handleBorderToggle={handleBorderToggle}
-                handleCommentaryToggle={handleCommentaryToggle}
-                isCommentaryActive={isCommentaryActive}
-                handleRootWordToggle={handleRootWordToggle}
-                isRootWordActive={isRootWordActive}
-                isAuthenticated={isAuthenticated}
-              />
-            </div>
-          }
-          <LineList
-            onSelectLine={setSelectedLine}
-            selectedLine={selectedLine}
-            lines={lines}
-            error={error}
-            fetchLines={fetchLines}
-            isCreating={isCreating}
-            setIsCreating={setIsCreating}
-            showArabic={showArabic}
-            bookTitle={bookTitle}
-            showEditor={showEditor}
+        <div className={theme === 'light' ? 'light-mode' : 'dark-mode'}>
 
-          />
-        </div>
-        <div className="line-details-container">
-        <div className="header" >
-                <h1 className="site-title" style={{textAlign: "center",}}>{bookTitle}</h1>
-                <FontAwesomeIcon className="burger-menu-icon"
-            icon={faBars}
-            onClick={toggleTray}
-            style={{
-              cursor: 'pointer', bottom: '50px', left: '10px', position:'relative'
-            }} />
-            </div>
-          {
-            isCreating
-              ? <FormComponent
-                newLine={newLine}
-                setNewLine={setNewLine}
-                handleCancel={handleCancel}
-                handleSubmit={handleSubmit}
-                handleInputChange={handleInputChange}
-              />
-              : lines.map(line => (
-                <LineDetail
-                  key={line.id}
-                  line={line}
-                  fetchLines={fetchLines}
-                  lines={lines}
+          <div className="line-list" style={{ display: isTrayOpen ? 'block' : 'none' }}>
+            <FontAwesomeIcon className="burger-menu-icon settingsIcon"
+              icon={faCogs}
+              onClick={handleSettingsButtonClick}
+            />
+            {
+              showSettingsMenu &&
+              <div className="settings-tray">
+                <SettingsMenu
+                  handleEditorToggle={handleEditorToggle}
+                  handleArabicToggle={handleArabicToggle}
                   showEditor={showEditor}
-                  isBorderActive={isBorderActive}
+                  showArabic={showArabic}
+                  closeSettingsMenu={closeSettingsMenu}
+                  handleBorderToggle={handleBorderToggle}
+                  handleCommentaryToggle={handleCommentaryToggle}
                   isCommentaryActive={isCommentaryActive}
+                  handleRootWordToggle={handleRootWordToggle}
                   isRootWordActive={isRootWordActive}
+                  isAuthenticated={isAuthenticated}
                 />
-              ))
-          }
+              </div>
+            }
+            <LineList
+              onSelectLine={setSelectedLine}
+              selectedLine={selectedLine}
+              lines={lines}
+              error={error}
+              fetchLines={fetchLines}
+              isCreating={isCreating}
+              setIsCreating={setIsCreating}
+              showArabic={showArabic}
+              bookTitle={bookTitle}
+              showEditor={showEditor}
+
+            />
+          </div>
+          <div className="line-details-container">
+            <div className="header" >
+              <h1 className="site-title" style={{ textAlign: "center", }}>{bookTitle}</h1>
+              <FontAwesomeIcon className="burger-menu-icon"
+                icon={faBars}
+                onClick={toggleTray}
+                style={{
+                  cursor: 'pointer', bottom: '50px', left: '10px', position: 'relative'
+                }} />
+            </div>
+            {
+              isCreating
+                ? <FormComponent
+                  newLine={newLine}
+                  setNewLine={setNewLine}
+                  handleCancel={handleCancel}
+                  handleSubmit={handleSubmit}
+                  handleInputChange={handleInputChange}
+                />
+                : lines.map(line => (
+                  <LineDetail
+                    key={line.id}
+                    line={line}
+                    fetchLines={fetchLines}
+                    lines={lines}
+                    showEditor={showEditor}
+                    isBorderActive={isBorderActive}
+                    isCommentaryActive={isCommentaryActive}
+                    isRootWordActive={isRootWordActive}
+                  />
+                ))
+            }
+          </div>
         </div>
       </div>
     </div>

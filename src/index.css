@@ -5,10 +5,22 @@ body {
   color: #333;
 }
 
+.light-mode{
+  background-color: white;
+  color: #333;
+  display: flex;
+}
+
+.dark-mode{
+  background-color: #333;
+  color: white;
+}
+
 .app-container {
   display: flex;
   flex-direction: row;
   height: 100vh;
+  background-color: #fff;
 }
 .burger-menu-icon {
   float: left;
@@ -16,6 +28,7 @@ body {
   margin-left: 10px;
 }
 .line-list {
+  flex-grow: 0;
   flex-basis: 500px;
   flex-shrink: 0;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
@@ -28,7 +41,7 @@ body {
   flex-direction: column;
   overflow-y: scroll;
   height: 100%;
-  
+  background-color: wheat;
 }
 
 .add-line-button {
@@ -37,6 +50,7 @@ body {
 }
 
 .line-details {
+  background-color: #fff;
   flex-direction: column;
   display: block;
   flex: 0 0 auto;
