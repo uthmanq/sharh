@@ -29,6 +29,7 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
                     key={line.id}
                     onClick={() => {
                       onSelectLine(line);
+                      //console.log(line)
                       const element = document.getElementById(line.id);
                       // Scroll to the element
                       if (element) {

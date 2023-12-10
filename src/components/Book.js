@@ -83,6 +83,7 @@ const Book = () => {
 
   //Post New Line to Book
   const handleSubmit = () => {
+    console.log("selected line is", selectedLine)
     const position = selectedLine
       ? lines.findIndex((line) => line.id === selectedLine.id) + 1
       : lines.length;
@@ -114,7 +115,6 @@ const Book = () => {
         return response.json();
       })
       .then((data) => {
-        console.log('book title is', data)
         setTitle(data.title);
         setLines(data.lines);
       })

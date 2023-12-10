@@ -124,6 +124,7 @@ router.get('/:bookId/lines', async (req, res) => {
 
 // POST /:bookId/lines
 router.post('/:bookId/lines', authenticateToken, async (req, res) => {
+    const position = req.body.position;
     const newLine = req.body.newLine;
     if (!newLine || !newLine.Arabic || !newLine.English) {
         return res.status(400).send('Bad Request: Missing required fields');
@@ -137,7 +138,12 @@ router.post('/:bookId/lines', authenticateToken, async (req, res) => {
         if (existingLine) {
             return res.status(400).send('Bad Request: Line with the same Arabic field already exists');
         }
-        book.lines.push(newLine);
+
+        if (position != null && position >= 0 && position <= book.lines.length) {
+            book.lines.splice(position, 0, newLine);
+        } else {
+            book.lines.push(newLine);
+        }
         const updatedBook = await book.save();
         const lastLine = updatedBook.lines[updatedBook.lines.length - 1];
         const formattedLine = {
@@ -149,6 +155,7 @@ router.post('/:bookId/lines', authenticateToken, async (req, res) => {
         };
         res.status(201).json(formattedLine);
     } catch (err) {
+        console.log(err);
         res.status(500).send('Internal Server Error');
     }
 });
