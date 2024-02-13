@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlusCircle } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from 'react-markdown';
+
 
 const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCreating, setIsCreating, showArabic, bookTitle, showEditor }) => {
 
@@ -46,7 +48,9 @@ const LineList = ({ onSelectLine, selectedLine, lines, error, fetchLines, isCrea
                 }}
                   >
                     <td className={showArabic ? "arabic-text" : "english-text"}>
+                    <ReactMarkdown>
                   {showArabic ? line.Arabic : line.English}
+                  </ReactMarkdown>
                 </td>
                 <td>
                   {showEditor && (<FontAwesomeIcon icon={faPlusCircle}

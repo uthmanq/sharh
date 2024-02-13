@@ -8,7 +8,7 @@ const FormComponent = ({ newLine, handleInputChange, handleCancel, handleSubmit 
         <div className="create-line-form-group">
           <label>
             Arabic:
-            <input
+            <textarea class="arabic-text"
               value={newLine.Arabic}
               onChange={(e) => handleInputChange('Arabic', e.target.value)}
             />
@@ -17,7 +17,7 @@ const FormComponent = ({ newLine, handleInputChange, handleCancel, handleSubmit 
         <div className="create-line-form-group">
           <label>
             English:
-            <input
+            <textarea
               value={newLine.English}
               onChange={(e) => handleInputChange('English', e.target.value)}
             />
