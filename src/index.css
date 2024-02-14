@@ -224,7 +224,7 @@ button:active {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 20px;
+  padding: 3px;
   border: 2px solid #333;
   border-radius: 10px;
   margin: 10px;
@@ -237,6 +237,7 @@ button:active {
   min-width: 0; /* Added to prevent flex items from overflowing */
   word-wrap: break-word; /* Added to break long words that might overflow */
   direction: rtl;
+  
 }
 .detail-title{
   text-align: center;

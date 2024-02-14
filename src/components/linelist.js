@@ -41,7 +41,16 @@ const LineList = ({
                         ref={provided.innerRef}
                         {...(showEditor ? provided.draggableProps : {})}
                         {...(showEditor ? provided.dragHandleProps : {})}
-                        onClick={() => onSelectLine(line)}
+                        onClick={() => {onSelectLine(line);
+                          //console.log(line)
+                      const element = document.getElementById(line.id);
+                      // Scroll to the element
+                      if (element) {
+                        element.scrollIntoView({ behavior: "smooth", block: "center" });
+                        
+                      }
+                    }
+                    }
                         style={{
                           ...provided.draggableProps.style,
                           fontWeight: selectedLine && line.id === selectedLine.id ? 'bold' : 'normal',
