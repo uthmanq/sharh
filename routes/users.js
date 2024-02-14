@@ -41,7 +41,9 @@ router.post('/login', async (req, res) => {
         if (!user || user.password !== password) {
             return res.status(401).send('Unauthorized: Incorrect username or password');
         }
-        const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '24h' });
+        const token = jwt.sign({ id: user._id }, SECRET_KEY, { 
+            //expiresIn: '24h' 
+        });
         res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email } });
     } catch (err) {
         console.log(err)

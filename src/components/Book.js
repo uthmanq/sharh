@@ -9,6 +9,7 @@ import { faCogs } from '@fortawesome/free-solid-svg-icons';
 import { useParams } from 'react-router-dom';
 import fetchWithAuth from '../functions/FetchWithAuth';
 import { ThemeContext } from './ThemeContext';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
@@ -53,6 +54,25 @@ const Book = () => {
   const handleRootWordToggle = () => {
     setIsRootWordActive(!isRootWordActive);
   };
+  const onDragEnd = (result) => {
+    const { source, destination } = result;
+
+    // Dropped outside the list or no movement
+    if (!destination || (source.index === destination.index)) {
+        return;
+    }
+
+    // Reordering the lines array in local state
+    const newLines = Array.from(lines);
+    const [reorderedItem] = newLines.splice(source.index, 1);
+    newLines.splice(destination.index, 0, reorderedItem);
+
+    setLines(newLines);
+
+    // Update the order on the server
+    updateLineOrderOnServer(reorderedItem.id, source.index, destination.index);
+};
+  
 
   const [newLine, setNewLine] = useState({
     Arabic: '',
@@ -80,6 +100,33 @@ const Book = () => {
   const handleSettingsButtonClick = () => {
     setShowSettingsMenu(!showSettingsMenu); // toggle the visibility of the settings menu
   };
+
+  const updateLineOrderOnServer = (lineId, fromIndex, toIndex) => {
+    fetchWithAuth(`${baseUrl}/books/${bookid}/lines/${lineId}/move`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fromIndex, toIndex }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to update line order on the server');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Line order updated successfully:', data);
+        // Optionally, you might want to re-fetch the lines to ensure the client and server are in sync
+        fetchLines();
+    })
+    .catch(error => {
+        console.error('Error updating line order:', error);
+        // Optionally, revert the order change in the client state in case of error
+        // This step requires storing the previous order and resetting to it upon error
+    });
+};
+
 
   //Post New Line to Book
   const handleSubmit = () => {
@@ -158,6 +205,7 @@ const Book = () => {
                 />
               </div>
             }
+          <DragDropContext onDragEnd={onDragEnd}>
             <LineList
               onSelectLine={setSelectedLine}
               selectedLine={selectedLine}
@@ -171,6 +219,8 @@ const Book = () => {
               showEditor={showEditor}
 
             />
+          </DragDropContext>
+
           </div>
           <div className="line-details-container">
             <div className="header" >
