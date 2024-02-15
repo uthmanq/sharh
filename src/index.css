@@ -259,6 +259,16 @@ button:active {
   margin-top: 10px;
 }
 
+blockquote{
+  width:80%;
+  margin:20px auto;
+  font-style:italic;
+  color: #555555;
+  padding:1.2em 15px 1.2em;
+  border-left:8px solid #508d67 ;
+}
+
+
 .text-container {
   display: flex;
   justify-content: space-between;
