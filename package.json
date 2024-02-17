@@ -18,6 +18,8 @@
     "fs": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
+    "markdown-to-txt": "^2.0.1",
+    "marked-react": "^2.0.0",
     "mongoose": "^8.0.0",
     "path": "^0.12.7",
     "react": "^18.2.0",
