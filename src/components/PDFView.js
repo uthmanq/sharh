@@ -52,7 +52,6 @@ const PDFView = () => {
     return lines.map(line => {
       // Start building the LaTeX string for each line
       let latex = `
-\\newline
 \\begin{otherlanguage}{arabic}
 \\begin{markdown}
   ${line.Arabic}
@@ -62,6 +61,8 @@ const PDFView = () => {
   \\begin{markdown}
 ${line.English}
   \\end{markdown}
+  \\newline
+
 
   `;
   
@@ -69,7 +70,6 @@ ${line.English}
       if (line.commentary && line.commentary.trim() !== '') {
         latex += `
   % Commentary formatting
-  \\vspace{1em} % Add some vertical space before the commentary
   \\fontsize{8pt}{10pt}\\selectfont
   \\begin{markdown}
 ${line.commentary}
@@ -91,7 +91,7 @@ ${line.commentary}
 
   // Complete LaTeX document
   const latexDocument = `
-  \\documentclass[12pt]{scrartcl}
+  \\documentclass[12pt]{article}
   \\usepackage[hashEnumerators,smartEllipses]{markdown}
   
     % \\usepackage{silence}
@@ -109,8 +109,10 @@ ${line.commentary}
   \\babelfont{rm}[Language=Default]{Georgia}
   \\babelfont[arabic]{rm}[Language=Default]{Amiri}
   \\babelfont[arabic]{sf}[Language=Default]{Noto Kufi Arabic}
-  
+  \\title{${bookTitle}}
+  \\date{}
   \\begin{document}
+  \\maketitle
 ${generateLatexForLines(lines)}
 \\end{document}
   `;
