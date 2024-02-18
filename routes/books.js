@@ -265,4 +265,45 @@ router.put('/:bookId/lines/:index/move', authenticateToken, async (req, res) => 
     }
 });
 
+// PUT /:bookId (Edit Metadata and Book Title)
+router.put('/:bookId', authenticateToken, async (req, res) => {
+    const { title, author, metadata } = req.body;
+    // Optional: Add validation logic here for title, author, and metadata if needed
+
+    try {
+        const book = await Book.findById(req.params.bookId);
+        if (!book) {
+            return res.status(404).send('Not Found: No book with the given ID exists');
+        }
+
+        // Update book fields if they are provided in the request body
+        if (title) book.title = title;
+        if (author) book.author = author;
+        if (metadata) book.metadata = metadata;
+
+        const updatedBook = await book.save();
+        const formattedBook = {
+            id: updatedBook._id,
+            title: updatedBook.title,
+            author: updatedBook.author,
+            metadata: updatedBook.metadata || {},
+            lines: updatedBook.lines.map(line => {
+                return {
+                    id: line._id,
+                    Arabic: line.Arabic,
+                    English: line.English,
+                    commentary: line.commentary || "",
+                    rootwords: line.rootwords || ""
+                };
+            })
+        };
+        console.log("success")
+        res.status(200).json('Line moved successfully');
+    } catch (err) {
+        console.log(err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+
 module.exports = router;

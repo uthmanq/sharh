@@ -62,8 +62,8 @@ const LineList = ({
                           </ReactMarkdown>
                         </td>
                         {showEditor && (
-                          <td>
-                            <FontAwesomeIcon icon={faPlusCircle} onClick={handleCreateLine} style={{ cursor: 'pointer' }}>Create Line</FontAwesomeIcon>
+                          <td onClick={handleCreateLine} style={{ cursor: 'pointer' }}>
+                            <FontAwesomeIcon icon={faPlusCircle} >Create Line</FontAwesomeIcon>
                           </td>
                         )}
                       </tr>

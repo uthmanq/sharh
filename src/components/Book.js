@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import LineList from './linelist';
 import LineDetail from './linedetail';
 import FormComponent from './formcomponent';
+import BookDetails from './BookDetails'
 import SettingsMenu from './settingsmenu'; // Import SettingsMenu
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
@@ -19,13 +20,28 @@ const Book = () => {
   const [selectedLine, setSelectedLine] = useState(null);
   const [lines, setLines] = useState([]);
   const [bookTitle, setTitle] = useState([]);
+  const [author, setAuthor] = useState([]);
+  const [metadata, setMetadata] = useState([]);
   const [error, setError] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
-  const [showArabic, setShowArabic] = useState(false);
+  
+  const [showEditor, setShowEditor] = useState(() =>{
+    const saved = localStorage.getItem('showEditor');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  
+  const [showArabic, setShowArabic] = useState(() =>{
+    const saved = localStorage.getItem('showArabic');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
   const [showSettingsMenu, setShowSettingsMenu] = useState(false); // state to control the visibility of the settings menu
   const [isBorderActive, setIsBorderActive] = useState(true);
-  const [isCommentaryActive, setIsCommentaryActive] = useState(false);
+  const [isCommentaryActive, setIsCommentaryActive] =
+  useState(() =>{
+    const saved = localStorage.getItem('isCommentaryActive');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
   const [isRootWordActive, setIsRootWordActive] = useState(false);
   const { bookid } = useParams(); // Access the id parameter
   const [isTrayOpen, setIsTrayOpen] = useState(false);
@@ -40,15 +56,18 @@ const Book = () => {
     setIsTrayOpen(!isTrayOpen);
   };
   const handleArabicToggle = () => {
+    localStorage.setItem('showArabic', JSON.stringify(!showArabic));
     setShowArabic(!showArabic);
   };
   const handleEditorToggle = () => {
+    localStorage.setItem('showEditor', JSON.stringify(!showEditor));
     setShowEditor(!showEditor);
   };
   const handleBorderToggle = () => {
     setIsBorderActive(!isBorderActive);
   };
   const handleCommentaryToggle = () => {
+    localStorage.setItem('isCommentaryActive', JSON.stringify(!isCommentaryActive));
     setIsCommentaryActive(!isCommentaryActive);
   };
   const handleRootWordToggle = () => {
@@ -163,6 +182,8 @@ const Book = () => {
       })
       .then((data) => {
         setTitle(data.title);
+        setAuthor(data.author);
+        setMetadata(data.metadata);
         setLines(data.lines);
       })
       .catch((error) => {
@@ -232,6 +253,19 @@ const Book = () => {
                   cursor: 'pointer', bottom: '50px', left: '10px', position: 'relative'
                 }} />
             </div>
+            <BookDetails
+              bookTitle = {bookTitle}
+              metadata = {metadata}
+              author={author}
+              showEditor={showEditor}
+              setTitle={setTitle}
+              setMetadata={setMetadata}
+              isBorderActive={isBorderActive}
+              fetchLines={fetchLines}
+
+            >
+                
+            </BookDetails>
             {
               isCreating
                 ? <FormComponent
