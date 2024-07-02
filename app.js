@@ -31,6 +31,15 @@ const userRoutes = require('./routes/users');
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
 
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  if (err instanceof URIError) {
+    res.status(400).send('Bad Request: Malformed URL');
+  } else {
+    res.status(500).send('Internal Server Error');
+  }
+});
+
 // HTTPS Options
 const options = {
   key: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/privkey.pem'),
