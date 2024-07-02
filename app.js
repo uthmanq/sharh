@@ -1,5 +1,4 @@
 const fs = require('fs');
-const https = require('https');
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -40,22 +39,8 @@ app.use((err, req, res, next) => {
   }
 });
 
-// HTTPS Options
-const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/fullchain.pem')
-};
-
-// Start HTTPS Server
-https.createServer(options, app).listen(443, () => {
-  console.log('HTTPS Server running on port 443');
-});
-
-// Redirect HTTP to HTTPS
+// Start HTTP Server
 const http = require('http');
-http.createServer((req, res) => {
-  res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-  res.end();
-}).listen(80, () => {
-  console.log('HTTP Server running on port 80 and redirecting to HTTPS');
+http.createServer(app).listen(80, () => {
+  console.log('HTTP Server running on port 80');
 });
