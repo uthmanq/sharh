@@ -1,3 +1,5 @@
+const fs = require('fs');
+const https = require('https');
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -21,16 +23,13 @@ mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 console.log(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 });
 
-//Import Routes
+// Import Routes
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
-//const authRoutes = require('./routes/auth');
 
 // Routes
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
-//app.use('/auth', authRoutes);
-
 
 app.post('/CLI-update', (req, res) => {
     // You could check for a simple secret or token if you still want some level of security
@@ -51,12 +50,25 @@ app.post('/CLI-update', (req, res) => {
     });
 });
 
-
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-const PORT = process.env.PORT || 80;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// Set up HTTPS
+const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/your_domain_or_ip/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/your_domain_or_ip/fullchain.pem')
+};
+
+https.createServer(options, app).listen(443, () => {
+    console.log('HTTPS Server running on port 443');
+});
+
+// Redirect HTTP to HTTPS
+const http = require('http');
+http.createServer((req, res) => {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+}).listen(80, () => {
+    console.log('HTTP Server running on port 80 and redirecting to HTTPS');
 });
