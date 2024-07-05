@@ -4,7 +4,15 @@ require('dotenv').config();
 const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 
-// Ensure that /search is defined before /:bookId
+const getExcerpt = (text, query, contextLength = 20) => {
+    const regex = new RegExp(`(.{0,${contextLength}})(${query})(.{0,${contextLength}})`, 'i');
+    const match = text.match(regex);
+    if (match) {
+        return `${match[1]}${match[2]}${match[3]}`;
+    }
+    return null;
+};
+
 router.get('/search', async (req, res) => {
     const { q } = req.query;
     if (!q) {
@@ -30,12 +38,19 @@ router.get('/search', async (req, res) => {
                 (line.commentary && line.commentary.match(new RegExp(q, 'i'))) ||
                 (line.rootwords && line.rootwords.match(new RegExp(q, 'i')))
             ).map(line => {
+                let excerpt = '';
+                if (line.Arabic.match(new RegExp(q, 'i'))) {
+                    excerpt = getExcerpt(line.Arabic, q);
+                } else if (line.English.match(new RegExp(q, 'i'))) {
+                    excerpt = getExcerpt(line.English, q);
+                } else if (line.commentary && line.commentary.match(new RegExp(q, 'i'))) {
+                    excerpt = getExcerpt(line.commentary, q);
+                } else if (line.rootwords && line.rootwords.match(new RegExp(q, 'i'))) {
+                    excerpt = getExcerpt(line.rootwords, q);
+                }
                 return {
                     id: line._id,
-                    Arabic: line.Arabic,
-                    English: line.English,
-                    commentary: line.commentary || "",
-                    rootwords: line.rootwords || ""
+                    excerpt: excerpt
                 };
             });
 
@@ -64,9 +79,10 @@ router.get('/search', async (req, res) => {
         res.json({ books: formattedBooks });
     } catch (err) {
         console.error('Error during book search:', err);
-        res.status(500).send('Internal Server Error (5)');
+        res.status(500).send('Internal Server Error');
     }
 });
+
 
 // Other routes
 router.get('/', async (req, res) => {
