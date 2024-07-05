@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
         });
         res.json({ books: formattedBooks });
     } catch (err) {
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!');
     }
 });
 
@@ -60,7 +60,7 @@ router.post('/', authenticateToken, async (req, res) => {
         res.status(201).json(formattedBook);
     } catch (err) {
         console.log(err)
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!');
     }
 });
 
@@ -88,7 +88,7 @@ router.get('/:bookId', async (req, res) => {
         };
         res.json(formattedBook);
     } catch (err) {
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!');
     }
 });
 
@@ -118,7 +118,7 @@ router.get('/:bookId/lines', async (req, res) => {
             lines: formattedLines
         });
     } catch (err) {
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!');
     }
 });
 
@@ -181,7 +181,7 @@ router.get('/search', async (req, res) => {
         res.json({ books: formattedBooks });
     } catch (err) {
         console.error('Error during book search:', err);
-        res.status(500).send('Internal Server Error!');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -220,7 +220,7 @@ router.post('/:bookId/lines', authenticateToken, async (req, res) => {
         res.status(201).json(formattedLine);
     } catch (err) {
         console.log(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -244,7 +244,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
         };
         res.json(formattedLine);
     } catch (err) {
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -275,7 +275,7 @@ router.put('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
         };
         res.json(formattedLine);
     } catch (err) {
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -294,7 +294,7 @@ router.delete('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
         res.status(200).json('Line deleted successfully');
     } catch (err) {
         console.log(err)
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -325,7 +325,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken, async (req, res) => 
         res.status(200).json('Line moved successfully');
     } catch (err) {
         console.log(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!!');
     }
 });
 
@@ -365,7 +365,7 @@ router.put('/:bookId', authenticateToken, async (req, res) => {
         res.status(200).json('Line moved successfully');
     } catch (err) {
         console.log(err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!!!!!!');
     }
 });
 
