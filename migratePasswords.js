@@ -1,12 +1,16 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+require('dotenv').config();
 const User = require('./models/User'); // Adjust the path if necessary
 
-mongoose.connect(process.env.MONGODB_URI, {
+const DBNAME = process.env.DBNAME;
+const DBADDRESS = process.env.DBADDRESS;
+
+mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+  useUnifiedTopology: true
+}).then(() => console.log('MongoDB Connected'))
+  .catch(err => console.log('MongoDB connection error:', err));
 
 const migratePasswords = async () => {
   try {
