@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
-const User = require('../models/User')
-const authenticateToken = require('../middleware/authenticate')
+const User = require('../models/User');
+const authenticateToken = require('../middleware/authenticate');
 const jwt = require('jsonwebtoken');
-const SECRET_KEY = process.env.SECRETKEY
+const bcrypt = require('bcrypt');
+const SECRET_KEY = process.env.SECRET_KEY;
 
-//POST Signup Endpoint
+// POST Signup Endpoint
 router.post('/signup', async (req, res) => {
     const { username, password, email } = req.body;
     if (!username || !password || !email) {
@@ -20,17 +21,16 @@ router.post('/signup', async (req, res) => {
         const newUser = new User({ username, password, email });
         const savedUser = await newUser.save();
         const token = jwt.sign({ id: savedUser._id }, SECRET_KEY, {
-            //  No expiry needed but otherwise, you can uncomment next line.
-            //  expiresIn: '24h' 
+            expiresIn: '24h'
         });
         res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email } });
     } catch (err) {
-        console.log(err)
+        console.log(err);
         res.status(500).send('Internal Server Error');
     }
 });
 
-//POST Login Endpoint
+// POST Login Endpoint
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -38,22 +38,21 @@ router.post('/login', async (req, res) => {
     }
     try {
         const user = await User.findOne({ username });
-        if (!user || user.password !== password) {
+        if (!user || !(await user.comparePassword(password))) {
             return res.status(401).send('Unauthorized: Incorrect username or password');
         }
-        const token = jwt.sign({ id: user._id }, SECRET_KEY, { 
-            //expiresIn: '24h' 
+        const token = jwt.sign({ id: user._id }, SECRET_KEY, {
+            expiresIn: '24h'
         });
         res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email } });
     } catch (err) {
-        console.log(err)
+        console.log(err);
         res.status(500).send('Internal Server Error');
     }
 });
 
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        // Assuming the JWT token contains the user's ID in the 'id' field
         const user = await User.findById(req.user.id).select('-password'); // Exclude the password from the result
         if (!user) {
             return res.status(404).send('User not found');
