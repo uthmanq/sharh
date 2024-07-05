@@ -181,7 +181,7 @@ router.get('/search', async (req, res) => {
         res.json({ books: formattedBooks });
     } catch (err) {
         console.error('Error during book search:', err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error!');
     }
 });
 
