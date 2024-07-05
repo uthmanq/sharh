@@ -17,7 +17,8 @@ const migratePasswords = async () => {
     const users = await User.find();
 
     for (const user of users) {
-      if (!bcrypt.getRounds(user.password)) { // Check if the password is already hashed
+      // Check if the password is already hashed
+      if (user.password.length !== 60 || !user.password.startsWith('$2b$')) {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
         await user.save();
