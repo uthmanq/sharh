@@ -4,11 +4,13 @@ require('dotenv').config();
 const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 
-const getExcerpt = (text, query, contextLength = 20) => {
+const getExcerpt = (text, query, contextLength = 35) => {
     const regex = new RegExp(`(.{0,${contextLength}}\\b)(${query})(\\b.{0,${contextLength}})`, 'i');
     const match = text.match(regex);
     if (match) {
-        return `${match[1]}${match[2]}${match[3]}`;
+        const before = match[1].trim().split(' ').slice(-contextLength).join(' ');
+        const after = match[3].trim().split(' ').slice(0, contextLength).join(' ');
+        return `${before} ${match[2]} ${after}`;
     }
     return null;
 };
