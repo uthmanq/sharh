@@ -4,6 +4,71 @@ require('dotenv').config();
 const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 
+// Ensure that /search is defined before /:bookId
+router.get('/search', async (req, res) => {
+    const { q } = req.query;
+    if (!q) {
+        return res.status(400).send('Bad Request: Missing query parameter');
+    }
+    try {
+        const books = await Book.find({
+            $or: [
+                { title: { $regex: q, $options: 'i' } },
+                { author: { $regex: q, $options: 'i' } },
+                { 'lines.Arabic': { $regex: q, $options: 'i' } },
+                { 'lines.English': { $regex: q, $options: 'i' } },
+                { 'lines.commentary': { $regex: q, $options: 'i' } },
+                { 'lines.rootwords': { $regex: q, $options: 'i' } }
+            ],
+            'metadata.hidden': { $ne: true }
+        });
+
+        const formattedBooks = books.map(book => {
+            const matchingLines = book.lines.filter(line => 
+                line.Arabic.match(new RegExp(q, 'i')) ||
+                line.English.match(new RegExp(q, 'i')) ||
+                (line.commentary && line.commentary.match(new RegExp(q, 'i'))) ||
+                (line.rootwords && line.rootwords.match(new RegExp(q, 'i')))
+            ).map(line => {
+                return {
+                    id: line._id,
+                    Arabic: line.Arabic,
+                    English: line.English,
+                    commentary: line.commentary || "",
+                    rootwords: line.rootwords || ""
+                };
+            });
+
+            if (matchingLines.length > 0) {
+                return {
+                    id: book._id,
+                    title: book.title,
+                    author: book.author,
+                    metadata: book.metadata || {},
+                    matchingLines: matchingLines
+                };
+            } else if (
+                book.title.match(new RegExp(q, 'i')) ||
+                book.author.match(new RegExp(q, 'i'))
+            ) {
+                return {
+                    id: book._id,
+                    title: book.title,
+                    author: book.author,
+                    metadata: book.metadata || {},
+                    matchingLines: []
+                };
+            }
+        }).filter(book => book !== undefined);
+
+        res.json({ books: formattedBooks });
+    } catch (err) {
+        console.error('Error during book search:', err);
+        res.status(500).send('Internal Server Error (5)');
+    }
+});
+
+// Other routes
 router.get('/', async (req, res) => {
     try {
         const books = await Book.find({ 'metadata.hidden': { $ne: true } });
@@ -121,70 +186,6 @@ router.get('/:bookId/lines', async (req, res) => {
         res.status(500).send('Internal Server Error (4)');
     }
 });
-
-router.get('/search', async (req, res) => {
-    const { q } = req.query;
-    if (!q) {
-        return res.status(400).send('Bad Request: Missing query parameter');
-    }
-    try {
-        const books = await Book.find({
-            $or: [
-                { title: { $regex: q, $options: 'i' } },
-                { author: { $regex: q, $options: 'i' } },
-                { 'lines.Arabic': { $regex: q, $options: 'i' } },
-                { 'lines.English': { $regex: q, $options: 'i' } },
-                { 'lines.commentary': { $regex: q, $options: 'i' } },
-                { 'lines.rootwords': { $regex: q, $options: 'i' } }
-            ],
-            'metadata.hidden': { $ne: true }
-        });
-
-        const formattedBooks = books.map(book => {
-            const matchingLines = book.lines.filter(line => 
-                line.Arabic.match(new RegExp(q, 'i')) ||
-                line.English.match(new RegExp(q, 'i')) ||
-                (line.commentary && line.commentary.match(new RegExp(q, 'i'))) ||
-                (line.rootwords && line.rootwords.match(new RegExp(q, 'i')))
-            ).map(line => {
-                return {
-                    id: line._id,
-                    Arabic: line.Arabic,
-                    English: line.English,
-                    commentary: line.commentary || "",
-                    rootwords: line.rootwords || ""
-                };
-            });
-
-            if (matchingLines.length > 0) {
-                return {
-                    id: book._id,
-                    title: book.title,
-                    author: book.author,
-                    metadata: book.metadata || {},
-                    matchingLines: matchingLines
-                };
-            } else if (
-                book.title.match(new RegExp(q, 'i')) ||
-                book.author.match(new RegExp(q, 'i'))
-            ) {
-                return {
-                    id: book._id,
-                    title: book.title,
-                    author: book.author,
-                    metadata: book.metadata || {},
-                    matchingLines: []
-                };
-            }
-        }).filter(book => book !== undefined);
-
-        res.json({ books: formattedBooks });
-    } catch (err) {
-        console.error('Error during book search:', err);
-        res.status(500).send('Internal Server Error (5)');
-    }
-});
-
 
 // POST /:bookId/lines
 router.post('/:bookId/lines', authenticateToken, async (req, res) => {
@@ -362,12 +363,11 @@ router.put('/:bookId', authenticateToken, async (req, res) => {
             })
         };
         console.log("success")
-        res.status(200).json('Line moved successfully');
+        res.status(200).json('Book updated successfully');
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error (11)');
     }
 });
-
 
 module.exports = router;
