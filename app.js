@@ -49,7 +49,7 @@ const options = {
 
 // Start HTTPS Server
 https.createServer(options, app).listen(443, () => {
-  console.log('HTTPS Server running on port 443');
+  console.log('HTTPS Server running on port 443. Version 1.1');
 });
 
 // Redirect HTTP to HTTPS
@@ -57,5 +57,5 @@ http.createServer((req, res) => {
   res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
   res.end();
 }).listen(80, () => {
-  console.log('HTTP Server running on port 80 and redirecting to HTTPS');
+  console.log('HTTP Server running on port 80 and redirecting to HTTPS.');
 });
