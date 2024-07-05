@@ -5,7 +5,7 @@ const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 
 const getExcerpt = (text, query, contextLength = 20) => {
-    const regex = new RegExp(`(.{0,${contextLength}})(${query})(.{0,${contextLength}})`, 'i');
+    const regex = new RegExp(`(.{0,${contextLength}}\\b)(${query})(\\b.{0,${contextLength}})`, 'i');
     const match = text.match(regex);
     if (match) {
         return `${match[1]}${match[2]}${match[3]}`;
