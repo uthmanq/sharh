@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
   if (err instanceof URIError) {
     res.status(400).send('Bad Request: Malformed URL');
   } else {
-    res.status(500).send('Internal Server Error');
+    res.status(500).send('Internal Server Error (MWE)');
   }
 });
 
