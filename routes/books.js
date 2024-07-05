@@ -5,12 +5,17 @@ const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 
 const getExcerpt = (text, query, contextLength = 35) => {
-    const regex = new RegExp(`(.{0,${contextLength}}\\b)(${query})(\\b.{0,${contextLength}})`, 'i');
+    const regex = new RegExp(`(.{0,${contextLength}}\\b)\\b(${query})\\b(\\b.{0,${contextLength}})`, 'i');
     const match = text.match(regex);
     if (match) {
-        const before = match[1].trim();
-        const after = match[3].trim();
-        return `${before} ${match[2]} ${after}`;
+        const before = match[1] ? match[1].split(' ') : [];
+        const after = match[3] ? match[3].split(' ') : [];
+        
+        // Join before and after with proper context length
+        const beforeText = before.slice(-(contextLength)).join(' ');
+        const afterText = after.slice(0, contextLength).join(' ');
+        
+        return `${beforeText} ${match[2]} ${afterText}`.trim();
     }
     return null;
 };
