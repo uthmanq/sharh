@@ -26,15 +26,14 @@ router.post('/signup', async (req, res) => {
             name: username,
         });
 
-        const newUser = new User({ username, password, email });
-        newUser.stripeCustomerId = customer.id; // Store Stripe customer ID in the user model
+        const newUser = new User({ username, password, email, stripeCustomerId: customer.id });
         const savedUser = await newUser.save();
 
         const token = jwt.sign({ id: savedUser._id }, SECRET_KEY, {
             expiresIn: '24h'
         });
 
-        res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId } });
+        res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId, roles: savedUser.roles } });
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');
@@ -55,7 +54,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ id: user._id }, SECRET_KEY, {
             expiresIn: '24h'
         });
-        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email, stripeCustomerId: user.stripeCustomerId } });
+        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email, stripeCustomerId: user.stripeCustomerId, roles: user.roles } });
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');

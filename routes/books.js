@@ -119,7 +119,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
     const newBook = new Book(req.body.newBook);
     if (!newBook || !newBook.title || !newBook.author) {
         return res.status(400).send('Bad Request: Missing required fields');
@@ -211,7 +211,7 @@ router.get('/:bookId/lines', async (req, res) => {
 });
 
 // POST /:bookId/lines
-router.post('/:bookId/lines', authenticateToken, async (req, res) => {
+router.post('/:bookId/lines', authenticateToken(['editor', 'admin']), async (req, res) => {
     const position = req.body.position;
     const newLine = req.body.newLine;
     if (!newLine || !newLine.Arabic || !newLine.English) {
@@ -273,7 +273,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 });
 
 // PUT /:bookId/lines/:lineId
-router.put('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
+router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), async (req, res) => {
     const updatedLine = req.body.updatedLine;
     if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
         return res.status(400).send('Bad Request: Missing required fields');
@@ -304,7 +304,7 @@ router.put('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
 });
 
 // DELETE /:bookId/lines/:lineId
-router.delete('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
+router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId);
         if (!book) {
@@ -323,7 +323,7 @@ router.delete('/:bookId/lines/:lineId', authenticateToken, async (req, res) => {
 });
 
 // Move Line
-router.put('/:bookId/lines/:index/move', authenticateToken, async (req, res) => {
+router.put('/:bookId/lines/:index/move', authenticateToken(['editor', 'admin']), async (req, res) => {
     const fromIndex = parseInt(req.body.fromIndex);
     const toIndex = parseInt(req.body.toIndex);
     const bookId = req.params.bookId;
@@ -354,7 +354,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken, async (req, res) => 
 });
 
 // PUT /:bookId (Edit Metadata and Book Title)
-router.put('/:bookId', authenticateToken, async (req, res) => {
+router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) => {
     const { title, author, metadata } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
