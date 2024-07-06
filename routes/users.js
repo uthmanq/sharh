@@ -5,6 +5,7 @@ const User = require('../models/User');
 const authenticateToken = require('../middleware/authenticate');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const SECRET_KEY = process.env.SECRET_KEY;
 
 // POST Signup Endpoint
@@ -18,12 +19,22 @@ router.post('/signup', async (req, res) => {
         if (existingUser) {
             return res.status(400).send('Bad Request: User with the same username or email already exists');
         }
+
+        // Create a new Stripe customer
+        const customer = await stripe.customers.create({
+            email: email,
+            name: username,
+        });
+
         const newUser = new User({ username, password, email });
+        newUser.stripeCustomerId = customer.id; // Store Stripe customer ID in the user model
         const savedUser = await newUser.save();
+
         const token = jwt.sign({ id: savedUser._id }, SECRET_KEY, {
             expiresIn: '24h'
         });
-        res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email } });
+
+        res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId } });
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');
@@ -44,7 +55,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ id: user._id }, SECRET_KEY, {
             expiresIn: '24h'
         });
-        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email } });
+        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email, stripeCustomerId: user.stripeCustomerId } });
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');
