@@ -38,7 +38,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "updateUserRoles": "node scripts/updateUserRoles.js"
+    "promoteUser": "node scripts/promoteUser.js"
 
   },
   "eslintConfig": {
