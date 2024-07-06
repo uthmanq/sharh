@@ -1,6 +1,7 @@
 // scripts/updateUserRoles.js
 
 const mongoose = require('mongoose');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe secret key
 require('dotenv').config();
 const User = require('../models/User'); // Adjust the path if necessary
 
@@ -22,6 +23,15 @@ const updateUserRoles = async () => {
     if (!user) {
       console.log(`User with username ${username} not found`);
       return;
+    }
+
+    // Create a Stripe customer if the user doesn't have one
+    if (!user.stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.username,
+      });
+      user.stripeCustomerId = customer.id;
     }
 
     // Update user roles
