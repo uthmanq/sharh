@@ -1,12 +1,15 @@
 // scripts/updateUserRoles.js
 
 const mongoose = require('mongoose');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe secret key
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe secret key
 const User = require('../models/User'); // Adjust the path if necessary
 
 const DBNAME = process.env.DBNAME;
 const DBADDRESS = process.env.DBADDRESS;
+console.log("DB Name", DBNAME);
+console.log("DB ADDRESS", DBADDRESS)
+console.log("STRIPE KEY", process.env.STRIPE_SECRET_KEY)
 
 mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
   useNewUrlParser: true,
