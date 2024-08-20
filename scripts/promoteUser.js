@@ -20,7 +20,7 @@ mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 const updateUserRoles = async () => {
   try {
     // Find the user by username
-    const username = 'uthman.aq';
+    const username = 'abc2';
     const user = await User.findOne({ username });
 
     if (!user) {
