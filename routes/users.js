@@ -77,6 +77,7 @@ router.put('/admin/user/:id/roles', authenticateToken(['admin']), async (req, re
     }
 });
 
+// Delete user (Admin Only)
 router.delete('/admin/user/:id', authenticateToken(['admin']), async (req, res) => {
     const { id } = req.params;
 
@@ -86,13 +87,14 @@ router.delete('/admin/user/:id', authenticateToken(['admin']), async (req, res) 
             return res.status(404).send('User not found');
         }
 
-        await user.remove();
+        await user.deleteOne(); // Use deleteOne() instead of remove()
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
-        console.error('Error deleting user:', error); // Log the specific error to investigate
+        console.error('Error deleting user:', error);
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 
 // Fetch all users (Admin Only)
