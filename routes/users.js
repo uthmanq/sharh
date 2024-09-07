@@ -8,7 +8,11 @@ const bcrypt = require('bcrypt');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const SECRET_KEY = process.env.SECRET_KEY;
 
-const { username, password, email } = req.body;
+
+
+// POST Signup Endpoint
+router.post('/signup', async (req, res) => {
+    const { username, password, email } = req.body;
     if (!username || !password || !email) {
         return res.status(400).send('Bad Request: Missing required fields');
     }
@@ -49,9 +53,7 @@ router.post('/login', async (req, res) => {
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).send('Unauthorized: Incorrect username or password');
         }
-        const token = jwt.sign({ id: user._id }, SECRET_KEY, {
-            expiresIn: '24h'
-        });
+        const token = jwt.sign({ id: user._id }, SECRET_KEY);
         res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email, stripeCustomerId: user.stripeCustomerId, roles: user.roles } });
     } catch (err) {
         console.log(err);
