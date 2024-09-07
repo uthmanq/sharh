@@ -94,4 +94,14 @@ router.delete('/admin/user/:id', authenticateToken(['admin']), async (req, res) 
     }
 });
 
+// Fetch all users (Admin Only)
+router.get('/admin/users', authenticateToken(['admin']), async (req, res) => {
+    try {
+        const users = await User.find().select('-password'); // Fetch all users excluding passwords
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 module.exports = router;
