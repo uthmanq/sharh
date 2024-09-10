@@ -134,7 +134,12 @@ router.get('/', async (req, res) => {
 
 // POST 
 router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
-    const newBook = new Book(req.body.newBook);
+    const newBookData = {
+        ...req.body.newBook,
+        owner: req.user._id // Assuming req.user contains the authenticated user's data
+    };
+
+    const newBook = new Book(newBookData);
     if (!newBook || !newBook.title || !newBook.author) {
         return res.status(400).send('Bad Request: Missing required fields');
     }
