@@ -3,6 +3,19 @@ const router = express.Router();
 require('dotenv').config();
 const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
+const multer = require('multer');
+const AWS = require('aws-sdk');
+
+// Configure AWS SDK for the new bucket
+const s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION
+});
+
+// Configure Multer storage (for memory storage)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const getExcerpt = (text, query, contextLength = 35) => {
     const regex = new RegExp(`(.{0,${contextLength}}\\b)\\b(${query})\\b(\\b.{0,${contextLength}})`, 'i');
@@ -91,10 +104,11 @@ router.get('/search', async (req, res) => {
 });
 
 
+
 // Other routes
 router.get('/', async (req, res) => {
     try {
-        const books = await Book.find({ 'metadata.hidden': { $ne: true } });
+        const books = await Book.find({ visibility: 'public' });
         const formattedBooks = books.map(book => {
             return {
                 id: book._id,
@@ -143,7 +157,8 @@ router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
                     commentary: line.commentary || "",
                     rootwords: line.rootwords || ""
                 };
-            })
+            }),
+            owner = req.user
         };
         res.status(201).json(formattedBook);
     } catch (err) {
