@@ -158,7 +158,7 @@ router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
                     rootwords: line.rootwords || ""
                 };
             }),
-            owner = req.user
+            owner: req.user
         };
         res.status(201).json(formattedBook);
     } catch (err) {
