@@ -132,6 +132,44 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/mybooks', authenticateToken(['user', 'editor', 'admin']), async (req, res) => {
+    try {
+        // Find books where the logged-in user is the owner or a contributor
+        const books = await Book.find({
+            $or: [
+                { owner: req.user._id },
+                { contributors: req.user._id }
+            ]
+        });
+
+        // Format the books as needed
+        const formattedBooks = books.map(book => {
+            return {
+                id: book._id,
+                title: book.title,
+                author: book.author,
+                metadata: book.metadata || {},
+                // Uncomment if you want to include lines in the response
+                // lines: book.lines.map(line => {
+                //     return {
+                //         id: line._id,
+                //         Arabic: line.Arabic,
+                //         English: line.English,
+                //         commentary: line.commentary || "",
+                //         rootwords: line.rootwords || ""
+                //     };
+                // })
+            };
+        });
+
+        // Send the formatted books as a response
+        res.json({ books: formattedBooks });
+    } catch (err) {
+        res.status(500).send('Internal Server Error (1)');
+    }
+});
+
+
 // POST 
 router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
     const newBookData = {
