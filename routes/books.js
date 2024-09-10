@@ -7,15 +7,15 @@ const multer = require('multer');
 const AWS = require('aws-sdk');
 
 // Configure AWS SDK for the new bucket
-const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION
-});
+// const s3 = new AWS.S3({
+//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+//     region: process.env.AWS_REGION
+// });
 
-// Configure Multer storage (for memory storage)
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// // Configure Multer storage (for memory storage)
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
 
 const getExcerpt = (text, query, contextLength = 35) => {
     const regex = new RegExp(`(.{0,${contextLength}}\\b)\\b(${query})\\b(\\b.{0,${contextLength}})`, 'i');
