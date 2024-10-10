@@ -10,6 +10,7 @@ const path = require('path');
 
 const app = express();
 
+const ENVIRONMENT = process.env.ENVIRONMENT || 'development';
 const DBNAME = process.env.DBNAME;
 const DBADDRESS = process.env.DBADDRESS;
 
@@ -43,21 +44,28 @@ app.use((err, req, res, next) => {
   }
 });
 
-// HTTPS Options
-const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/fullchain.pem')
-};
+if (ENVIRONMENT === 'development') {
+  // Start HTTP server without HTTPS for development
+  http.createServer(app).listen(80, () => {
+    console.log('Development HTTP Server running on port 80');
+  });
+} else {
+  // HTTPS Options
+  const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/fullchain.pem')
+  };
 
-// Start HTTPS Server
-https.createServer(options, app).listen(443, () => {
-  console.log('HTTPS Server running on port 443. Version 1.1');
-});
+  // Start HTTPS Server
+  https.createServer(options, app).listen(443, () => {
+    console.log('HTTPS Server running on port 443. Version 1.1');
+  });
 
-// Redirect HTTP to HTTPS
-http.createServer((req, res) => {
-  res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-  res.end();
-}).listen(80, () => {
-  console.log('HTTP Server running on port 80 and redirecting to HTTPS.');
-});
+  // Redirect HTTP to HTTPS
+  http.createServer((req, res) => {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+  }).listen(80, () => {
+    console.log('HTTP Server running on port 80 and redirecting to HTTPS.');
+  });
+}

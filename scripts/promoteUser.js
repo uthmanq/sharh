@@ -1,7 +1,7 @@
 // scripts/updateUserRoles.js
 
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe secret key
 const User = require('../models/User'); // Adjust the path if necessary
 
@@ -20,7 +20,7 @@ mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 const updateUserRoles = async () => {
   try {
     // Find the user by username
-    const username = 'abc2';
+    const username = 'uthman1';
     const user = await User.findOne({ username });
 
     if (!user) {

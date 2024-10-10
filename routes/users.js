@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const SECRET_KEY = process.env.SECRET_KEY;
+const { sendEmail } = require('../scripts/sendEmail');
 
 
 
@@ -14,6 +15,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 router.post('/signup', async (req, res) => {
     const { username, password, email } = req.body;
     if (!username || !password || !email) {
+        console.log(password)
         return res.status(400).send('Bad Request: Missing required fields');
     }
     try {
@@ -149,5 +151,37 @@ router.get('/admin/users', authenticateToken(['admin']), async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+
+// POST route to send an email
+router.post('/admin/email', authenticateToken(['admin']), async (req, res) => {
+    const { recipients, subject, html } = req.body;
+  
+    // Validate the request body to ensure all necessary fields are provided
+    if (!recipients || !subject || !html) {
+      return res.status(400).json({ error: 'Recipients, subject, and HTML content are required.' });
+    }
+  
+    try {
+      // Call the sendEmail function and pass in the success and error callbacks
+      sendEmail(
+        recipients,
+        subject,
+        html,
+        (info) => {
+          // Success callback: send a success response to the client
+          return res.status(200).json({ message: 'Email sent successfully', messageId: info.messageId });
+        },
+        (error) => {
+          // Error callback: send an error response to the client
+          return res.status(500).json({ error: 'Failed to send email', details: error.message });
+        }
+      );
+    } catch (err) {
+      // Catch any unexpected errors and return a server error response
+      return res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+  });
+  
+  module.exports = router;
 
 module.exports = router;
