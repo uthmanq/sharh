@@ -27,7 +27,17 @@ const bookSchema = new mongoose.Schema({
         type: String, 
         enum: ['private', 'public'], 
         default: 'private' 
+    },
+    lastUpdated: { 
+        type: Date, 
+        default: Date.now 
     }
+});
+
+// Middleware to update 'lastUpdated' before each save
+bookSchema.pre('save', function(next) {
+    this.lastUpdated = Date.now();
+    next();
 });
 
 const Book = mongoose.model('Book', bookSchema);
