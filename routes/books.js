@@ -115,6 +115,7 @@ router.get('/', async (req, res) => {
                 title: book.title,
                 author: book.author,
                 metadata: book.metadata || {},
+                lastUpdated: book.lastUpdated
                // lines: book.lines.map(line => {
                //     return {
                //         id: line._id,
