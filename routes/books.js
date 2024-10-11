@@ -231,7 +231,8 @@ router.get('/:bookId', async (req, res) => {
                     commentary: line.commentary || "",
                     rootwords: line.rootwords || ""
                 };
-            })
+            }),
+            lastUpdated: book.lastUpdated
         };
         res.json(formattedBook);
     } catch (err) {
