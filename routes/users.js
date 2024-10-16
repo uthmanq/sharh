@@ -38,6 +38,33 @@ router.post('/signup', async (req, res) => {
         });
 
         res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId, roles: savedUser.roles } });
+        // Send welcome email asynchronously
+        const recipients = [savedUser.email];
+        const subject = 'Welcome to Sharh App: Join the Community!';
+        const html = `<p> Dear ${savedUser.username},</p>
+<p> Assalamualaykum! Thank you for joining <strong>Sharh</strong>. Our vision to give users across the world access to the Ummah's written tradition. Sharh is an application aimed at redesigning how translations are read and taught. Every day, our library of translations in Kalam, Fiqh, Mantiq, Usul ul-Fiqh, and more are growing. We are pleased to have you join the Sharh community. </p>
+
+<p> We have an exclusive members-only Telegram group that you are invited to join, where we will be posting exclusive content, updates, and discussions on everything related to translations, Kalam, Fiqh, Mantiq, and the likes. You can join the link by downloading Telegram and <a href="https://t.me/+UUYyTtJSzzAwNWIx">then joining the group here.</a>We have so many new features and new books to be announced and published! You can read more about our planned features on our front page. </p>
+
+<p> Sincerely, </p>
+<p> Uthman Qureshi (Founder and Translator of Sharh) </p>
+
+<p>PS: If you find any benefit in the app, we would be thrilled if you chose to <a href="https://sharhapp.com/support">become a monthly supporter here</a>. It is only through the kindness of supporters like yourself that a project like this can continue. (Btw, it costs less than a cup of coffee a month.) </p>
+        `;
+
+        // Send email without affecting signup success
+        sendEmail(
+            recipients,
+            subject,
+            html,
+            (info) => {
+                console.log('Welcome email sent successfully', info.messageId);
+            },
+            (error) => {
+                console.error('Failed to send welcome email', error.message);
+            }
+        );
+
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');
@@ -155,33 +182,33 @@ router.get('/admin/users', authenticateToken(['admin']), async (req, res) => {
 // POST route to send an email
 router.post('/admin/email', authenticateToken(['admin']), async (req, res) => {
     const { recipients, subject, html } = req.body;
-  
+
     // Validate the request body to ensure all necessary fields are provided
     if (!recipients || !subject || !html) {
-      return res.status(400).json({ error: 'Recipients, subject, and HTML content are required.' });
+        return res.status(400).json({ error: 'Recipients, subject, and HTML content are required.' });
     }
-  
+
     try {
-      // Call the sendEmail function and pass in the success and error callbacks
-      sendEmail(
-        recipients,
-        subject,
-        html,
-        (info) => {
-          // Success callback: send a success response to the client
-          return res.status(200).json({ message: 'Email sent successfully', messageId: info.messageId });
-        },
-        (error) => {
-          // Error callback: send an error response to the client
-          return res.status(500).json({ error: 'Failed to send email', details: error.message });
-        }
-      );
+        // Call the sendEmail function and pass in the success and error callbacks
+        sendEmail(
+            recipients,
+            subject,
+            html,
+            (info) => {
+                // Success callback: send a success response to the client
+                return res.status(200).json({ message: 'Email sent successfully', messageId: info.messageId });
+            },
+            (error) => {
+                // Error callback: send an error response to the client
+                return res.status(500).json({ error: 'Failed to send email', details: error.message });
+            }
+        );
     } catch (err) {
-      // Catch any unexpected errors and return a server error response
-      return res.status(500).json({ error: 'Internal server error', details: err.message });
+        // Catch any unexpected errors and return a server error response
+        return res.status(500).json({ error: 'Internal server error', details: err.message });
     }
-  });
-  
-  module.exports = router;
+});
+
+module.exports = router;
 
 module.exports = router;
