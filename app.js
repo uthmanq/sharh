@@ -23,7 +23,11 @@ const corsOptions = {
   exposedHeaders: ['Content-Disposition'],  // Allow the browser to access 'Content-Disposition'
 };
 
-app.use(cors(corsOptions));
+//app.use(cors(corsOptions));
+
+app.use(cors({
+  exposedHeaders: ['Content-Disposition']
+}));
 
 // Connect to MongoDB
 mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
@@ -55,9 +59,7 @@ app.use((err, req, res, next) => {
 
 if (ENVIRONMENT === 'development') {
 
-  app.use(cors({
-    exposedHeaders: ['Content-Disposition']
-  }));
+
   // Start HTTP server without HTTPS for development
   http.createServer(app).listen(80, () => {
     console.log('Development HTTP Server running on port 80');
