@@ -16,7 +16,14 @@ const DBADDRESS = process.env.DBADDRESS;
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+
+const corsOptions = {
+  origin: 'https://sharhapp.com',  // Replace with your frontend domain
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  exposedHeaders: ['Content-Disposition'],  // Allow the browser to access 'Content-Disposition'
+};
+
+app.use(cors(corsOptions));
 
 // Connect to MongoDB
 mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
