@@ -46,32 +46,33 @@ router.post('/upload', authenticateToken(['admin']), upload.single('file'), asyn
   });
 
 // Route to download a file from S3 using the File model's ID
-router.get('/download/:id',authenticateToken(['admin']), async (req, res) => {
+router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
     try {
-      const fileId = req.params.id; // File model's ID passed as a route parameter
-  
-      // Fetch the file metadata from MongoDB by ID
-      const fileRecord = await File.findById(fileId);
-  
-      if (!fileRecord) {
-        return res.status(404).json({ message: 'File not found' });
-      }
-  
-      const s3Key = fileRecord.s3Key;
-  
-      // Use the getFileStream function to stream the file directly to the client
-      const fileStream = s3Service.getFileStream(s3Key);
-  
-      // Set the headers to suggest download in the browser
-      res.attachment(fileRecord.fileName); // Suggest the file name for the download
-  
-      // Pipe the S3 file stream to the response
-      fileStream.pipe(res);
+        const fileId = req.params.id; // File model's ID passed as a route parameter
+
+        // Fetch the file metadata from MongoDB by ID
+        const fileRecord = await File.findById(fileId);
+
+        if (!fileRecord) {
+            return res.status(404).json({ message: 'File not found' });
+        }
+
+        const s3Key = fileRecord.s3Key;
+
+        // Use the getFileStream function to stream the file directly to the client
+        const fileStream = s3Service.getFileStream(s3Key);
+
+        // Ensure that the Content-Disposition header includes the filename
+        res.setHeader('Content-Disposition', `attachment; filename="${fileRecord.fileName}"`);
+
+        // Pipe the S3 file stream to the response
+        fileStream.pipe(res);
     } catch (err) {
-      console.error('Error in download route:', err);
-      res.status(500).json({ message: 'Error retrieving file', error: err.message });
+        console.error('Error in download route:', err);
+        res.status(500).json({ message: 'Error retrieving file', error: err.message });
     }
-  });
+});
+
   
   
 
