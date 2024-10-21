@@ -46,6 +46,7 @@ router.post('/upload', authenticateToken(['admin']), upload.single('file'), asyn
   });
 
 // Route to download a file from S3 using the File model's ID
+// Route to download a file from S3 using the File model's ID
 router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
     try {
         const fileId = req.params.id; // File model's ID passed as a route parameter
@@ -62,7 +63,10 @@ router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
         // Use the getFileStream function to stream the file directly to the client
         const fileStream = s3Service.getFileStream(s3Key);
 
-        // Ensure that the Content-Disposition header includes the filename
+        // Set the Content-Type header to the file's MIME type
+        res.setHeader('Content-Type', fileRecord.fileType);
+
+        // Set the Content-Disposition header to suggest a download filename
         res.setHeader('Content-Disposition', `attachment; filename="${fileRecord.fileName}"`);
 
         // Pipe the S3 file stream to the response
@@ -72,6 +76,8 @@ router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
         res.status(500).json({ message: 'Error retrieving file', error: err.message });
     }
 });
+
+
 
   
   
