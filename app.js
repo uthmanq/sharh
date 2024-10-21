@@ -29,11 +29,13 @@ mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
 const stripeRoutes = require('./routes/stripe');
+const fileRoutes = require('./routes/files');
 
 // Use Routes
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
 app.use('/stripe', stripeRoutes);
+app.use('/files', fileRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

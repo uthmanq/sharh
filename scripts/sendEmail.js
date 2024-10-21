@@ -53,6 +53,6 @@ const onError = (error) => {
 };
 
 // Calling the sendEmail function
-sendEmail(recipients, subject, htmlContent, onSuccess, onError);
+//sendEmail(recipients, subject, htmlContent, onSuccess, onError);
 
 module.exports = { sendEmail };
