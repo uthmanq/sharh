@@ -147,18 +147,45 @@ router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
 // });
 
 // Route to list all files from the MongoDB model, excluding s3Key and s3Bucket
-router.get('/',authenticateToken(['admin']), async (req, res) => {
+router.get('/', authenticateToken(['admin']), async (req, res) => {
     try {
-      // Query the File model, explicitly excluding the s3Key and s3Bucket fields
-      const files = await File.find().select('-s3Key -s3Bucket');
-  
-      // Return the filtered list of files (without s3Key and s3Bucket)
-      res.status(200).json({ files });
+        // Create an empty filter object
+        let filter = {};
+
+        // Check for query parameters and add them to the filter object if they exist
+        if (req.query.fileName) {
+            filter.fileName = req.query.fileName;
+        }
+        if (req.query.author) {
+            filter.author = req.query.author;
+        }
+        if (req.query.uploadDate) {
+            filter.uploadDate = new Date(req.query.uploadDate); // You can customize date handling
+        }
+        if (req.query.fileSize) {
+            filter.fileSize = req.query.fileSize; // You can add greater/less than operators here
+        }
+        if (req.query.fileType) {
+            filter.fileType = req.query.fileType;
+        }
+        if (req.query.tags) {
+            filter.tags = { $in: req.query.tags.split(',') }; // Split tags into an array
+        }
+        if (req.query.categories) {
+            filter.categories = { $in: req.query.categories.split(',') }; // Split categories into an array
+        }
+
+        // Query the File model using the constructed filter, excluding s3Key and s3Bucket fields
+        const files = await File.find(filter).select('-s3Key -s3Bucket');
+
+        // Return the filtered list of files (without s3Key and s3Bucket)
+        res.status(200).json({ files });
     } catch (err) {
-      console.error('Error retrieving files:', err);
-      res.status(500).json({ message: 'Error retrieving files', error: err.message });
+        console.error('Error retrieving files:', err);
+        res.status(500).json({ message: 'Error retrieving files', error: err.message });
     }
-  });
+});
+
   
 
 module.exports = router;

@@ -29,6 +29,14 @@ const FileSchema = new Schema({
   presignedUrl: {
     type: String, // Optional: Presigned URL for accessing the file
   },
+  tags: {
+    type: [String], // Optional: Array of strings for tags
+    default: [], // Default to an empty array if not provided
+  },
+  categories: {
+    type: [String], // Optional: Array of strings for categories
+    default: [], // Default to an empty array if not provided
+  },
 });
 
 module.exports = mongoose.model('File', FileSchema);
