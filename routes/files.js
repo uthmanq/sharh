@@ -9,41 +9,40 @@ const { v4: uuidv4 } = require('uuid'); // Use UUID for unique key generation
 // Set up multer to store files temporarily on the server
 const upload = multer({ dest: '../uploads/' }); // Files will be temporarily stored in 'uploads/' folder
 
-// Route to upload a file to S3 and save metadata in MongoDB
-router.post('/upload', authenticateToken(['admin']), upload.single('file'), async (req, res) => {
-    try {
-      const file = req.file; // The uploaded file
-      const author = req.body.author || 'Unknown'; // Optional author field
-      const title = req.body.title || file.originalname; // User-provided title or default to original name
+// Route to download a file from S3 using the File model's ID
+router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
+  try {
+      const fileId = req.params.id; // File model's ID passed as a route parameter
 
-      if (!file) {
-        return res.status(400).json({ message: 'No file uploaded' });
+      // Fetch the file metadata from MongoDB by ID
+      const fileRecord = await File.findById(fileId);
+
+      if (!fileRecord) {
+          return res.status(404).json({ message: 'File not found' });
       }
-   // Generate a unique key for S3 by appending a timestamp or UUID
-   const uniqueKey = `uploads/${uuidv4()}-${file.originalname}`; // Generates a unique key using UUID
 
-      // Upload file to S3
-      const s3Key = `uploads/${file.originalname}`; // The key (file name + path in S3)
-      const s3Data = await s3Service.uploadFile(file.path, uniqueKey); // File uploaded from temporary path
-  
-      // Save file metadata in MongoDB
-      const newFile = new File({
-        fileName: title, 
-        s3Key: s3Data.Key,
-        author: author,
-        s3Bucket: s3Data.Bucket,
-        fileSize: file.size, // File size from multer
-        fileType: file.mimetype, // MIME type from multer
-      });
-  
-      await newFile.save();
-  
-      res.status(201).json({ message: 'File uploaded and metadata saved successfully', file: newFile });
-    } catch (err) {
-      console.error('Error in upload:', err);
-      res.status(500).json({ message: 'Error uploading file', error: err.message });
-    }
-  });
+      const s3Key = fileRecord.s3Key;
+
+      // Sanitize the file name by removing problematic characters
+      let sanitizedFileName = fileRecord.fileName.replace(/[^\w.-]/g, '_'); // Replaces invalid characters with underscores
+
+      // Retrieve the file from S3
+      const fileStream = s3Service.getFileStream(s3Key);
+
+      // Set the Content-Type header based on the file type (from MongoDB or S3 metadata)
+      res.setHeader('Content-Type', fileRecord.fileType || 'application/octet-stream'); // Fallback to binary stream if no MIME type is found
+
+      // Ensure the file is downloaded and not opened inline by setting Content-Disposition
+      res.setHeader('Content-Disposition', `attachment; filename="${sanitizedFileName}"`);
+
+      // Pipe the S3 file stream to the response
+      fileStream.pipe(res);
+  } catch (err) {
+      console.error('Error in download route:', err);
+      res.status(500).json({ message: 'Error retrieving file', error: err.message });
+  }
+});
+
 
 // Route to download a file from S3 using the File model's ID
 // Route to download a file from S3 using the File model's ID
