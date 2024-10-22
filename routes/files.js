@@ -169,24 +169,31 @@ router.get('/', authenticateToken(['admin']), async (req, res) => {
             filter.fileType = { $regex: req.query.fileType, $options: 'i' }; // Partial match
         }
         if (req.query.tags) {
-            const tagList = req.query.tags.split(',').map(tag => new RegExp(tag, 'i')); // Convert to regex patterns
+            const tagList = req.query.tags.split(',').map(tag => new RegExp(tag.trim(), 'i')); // Convert to regex patterns
             filter.tags = { $in: tagList };
         }
         if (req.query.categories) {
-            const categoryList = req.query.categories.split(',').map(category => new RegExp(category, 'i')); // Convert to regex patterns
+            const categoryList = req.query.categories.split(',').map(category => new RegExp(category.trim(), 'i')); // Convert to regex patterns
             filter.categories = { $in: categoryList };
         }
+
+        // Initialize projection and sort options
+        let projection = { s3Key: 0, s3Bucket: 0 }; // Exclude these fields
+        let sortOption = {};
 
         // Text search
         if (req.query.searchTerm) {
             filter.$text = { $search: req.query.searchTerm };
+
+            // Since we are using text search, include the textScore in projection and sort
+            projection.score = { $meta: 'textScore' };
+            sortOption.score = { $meta: 'textScore' };
         }
 
-        // Query the File model using the constructed filter, excluding s3Key and s3Bucket fields
-        // Also project the textScore if a text search is used for sorting by relevance
+        // Query the File model using the constructed filter
         const files = await File.find(filter)
-            .select({ s3Key: 0, s3Bucket: 0, score: { $meta: 'textScore' } })
-            .sort({ score: { $meta: 'textScore' } }); // Sort by relevance if text search is used
+            .select(projection)
+            .sort(sortOption);
 
         // Return the filtered list of files (without s3Key and s3Bucket)
         res.status(200).json({ files });
