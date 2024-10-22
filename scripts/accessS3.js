@@ -71,10 +71,30 @@ const listFiles = async () => {
   }
 };
 
+// Function to delete a file from S3
+const deleteFile = async (s3Key) => {
+  try {
+    const params = {
+      Bucket: 'sharh-app', // Your bucket name
+      Key: s3Key, // The key (file name with path) in the S3 bucket
+    };
+
+    const data = await s3.deleteObject(params).promise();
+    console.log('File deleted successfully from S3:', data);
+    return data; // Return the deletion data
+  } catch (err) {
+    console.error('Error deleting file from S3:', err.message);
+    throw err; // Throw the error to be handled in the API
+  }
+};
+
+
+
 // Export the functions for use in other modules
 module.exports = {
   uploadFile,
   downloadFile,
   listFiles,
-  getFileStream
+  getFileStream,
+  deleteFile
 };

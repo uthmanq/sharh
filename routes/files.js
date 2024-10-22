@@ -101,6 +101,32 @@ router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
   }
 });
 
+// Route to delete a file by ID (from both S3 and MongoDB)
+router.delete('/:id', authenticateToken(['admin']), async (req, res) => {
+  try {
+      const fileId = req.params.id;
+
+      // Fetch the file metadata from MongoDB by ID
+      const fileRecord = await File.findById(fileId);
+
+      if (!fileRecord) {
+          return res.status(404).json({ message: 'File not found' });
+      }
+
+      const s3Key = fileRecord.s3Key;
+
+      // Delete the file from S3
+      await s3Service.deleteFile(s3Key);
+
+      // Delete the file metadata from MongoDB
+      await File.findByIdAndDelete(fileId);
+
+      res.status(200).json({ message: 'File deleted successfully' });
+  } catch (err) {
+      console.error('Error deleting file:', err);
+      res.status(500).json({ message: 'Error deleting file', error: err.message });
+  }
+});
 
 
 
