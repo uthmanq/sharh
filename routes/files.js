@@ -76,7 +76,7 @@ router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
     }
 });
 
-// Route to get file metadata
+// Route to get file metadata by file ID
 router.get('/files/:id/metadata', authenticateToken(['admin']), async (req, res) => {
   try {
       const fileId = req.params.id;
@@ -100,6 +100,7 @@ router.get('/files/:id/metadata', authenticateToken(['admin']), async (req, res)
       res.status(500).json({ message: 'Error retrieving file metadata', error: err.message });
   }
 });
+
 
 
 
