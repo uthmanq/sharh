@@ -77,7 +77,7 @@ router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
 });
 
 // Route to get file metadata by file ID
-router.get('/files/:id/metadata', authenticateToken(['admin']), async (req, res) => {
+router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
   try {
       const fileId = req.params.id;
 
