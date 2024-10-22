@@ -105,7 +105,31 @@ router.delete('/:id', authenticateToken(['admin']), async (req, res) => {
 });
 
 
-  
+  // Route to get file metadata by file ID
+router.get('/files/:id/metadata', authenticateToken(['admin']), async (req, res) => {
+  try {
+      const fileId = req.params.id;
+
+      // Fetch the file metadata from MongoDB by ID
+      const fileRecord = await File.findById(fileId);
+
+      if (!fileRecord) {
+          return res.status(404).json({ message: 'File not found' });
+      }
+
+      // Send file metadata (including the filename)
+      res.status(200).json({
+          fileName: fileRecord.fileName,
+          fileType: fileRecord.fileType,
+          author: fileRecord.author,
+          uploadDate: fileRecord.uploadDate
+      });
+  } catch (err) {
+      console.error('Error retrieving file metadata:', err);
+      res.status(500).json({ message: 'Error retrieving file metadata', error: err.message });
+  }
+});
+
   
 
 // Route to generate a presigned URL for accessing a file
