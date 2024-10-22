@@ -67,7 +67,7 @@ router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
       res.setHeader('Content-Type', fileRecord.fileType || 'application/octet-stream');
 
       // Ensure the file is downloaded by setting Content-Disposition header
-      res.setHeader('Content-Disposition', `attachment; filename="${fileRecord.fileName}"`);
+      //res.setHeader('Content-Disposition', `attachment; filename="${fileRecord.fileName}"`);
 
       // Pipe the S3 file stream to the response
       fileStream.pipe(res);
