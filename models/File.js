@@ -26,9 +26,6 @@ const FileSchema = new Schema({
   fileType: {
     type: String, // Optional: MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
   },
-  presignedUrl: {
-    type: String, // Optional: Presigned URL for accessing the file
-  },
   tags: {
     type: [String], // Optional: Array of strings for tags
     default: [], // Default to an empty array if not provided
@@ -38,5 +35,8 @@ const FileSchema = new Schema({
     default: [], // Default to an empty array if not provided
   },
 });
+
+// Create a text index on fileName, author, tags, and categories
+FileSchema.index({ fileName: 'text', author: 'text', tags: 'text', categories: 'text' });
 
 module.exports = mongoose.model('File', FileSchema);

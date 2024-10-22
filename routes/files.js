@@ -154,29 +154,39 @@ router.get('/', authenticateToken(['admin']), async (req, res) => {
 
         // Check for query parameters and add them to the filter object if they exist
         if (req.query.fileName) {
-            filter.fileName = req.query.fileName;
+            filter.fileName = { $regex: req.query.fileName, $options: 'i' }; // Partial match
         }
         if (req.query.author) {
-            filter.author = req.query.author;
+            filter.author = { $regex: req.query.author, $options: 'i' }; // Partial match
         }
         if (req.query.uploadDate) {
-            filter.uploadDate = new Date(req.query.uploadDate); // You can customize date handling
+            filter.uploadDate = new Date(req.query.uploadDate); // Exact match
         }
         if (req.query.fileSize) {
-            filter.fileSize = req.query.fileSize; // You can add greater/less than operators here
+            filter.fileSize = req.query.fileSize; // Exact match, you can add range logic here
         }
         if (req.query.fileType) {
-            filter.fileType = req.query.fileType;
+            filter.fileType = { $regex: req.query.fileType, $options: 'i' }; // Partial match
         }
         if (req.query.tags) {
-            filter.tags = { $in: req.query.tags.split(',') }; // Split tags into an array
+            const tagList = req.query.tags.split(',').map(tag => new RegExp(tag, 'i')); // Convert to regex patterns
+            filter.tags = { $in: tagList };
         }
         if (req.query.categories) {
-            filter.categories = { $in: req.query.categories.split(',') }; // Split categories into an array
+            const categoryList = req.query.categories.split(',').map(category => new RegExp(category, 'i')); // Convert to regex patterns
+            filter.categories = { $in: categoryList };
+        }
+
+        // Text search
+        if (req.query.searchTerm) {
+            filter.$text = { $search: req.query.searchTerm };
         }
 
         // Query the File model using the constructed filter, excluding s3Key and s3Bucket fields
-        const files = await File.find(filter).select('-s3Key -s3Bucket');
+        // Also project the textScore if a text search is used for sorting by relevance
+        const files = await File.find(filter)
+            .select({ s3Key: 0, s3Bucket: 0, score: { $meta: 'textScore' } })
+            .sort({ score: { $meta: 'textScore' } }); // Sort by relevance if text search is used
 
         // Return the filtered list of files (without s3Key and s3Bucket)
         res.status(200).json({ files });
@@ -185,6 +195,7 @@ router.get('/', authenticateToken(['admin']), async (req, res) => {
         res.status(500).json({ message: 'Error retrieving files', error: err.message });
     }
 });
+
 
   
 
