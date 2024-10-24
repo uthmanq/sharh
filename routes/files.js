@@ -11,43 +11,49 @@ const upload = multer({ dest: '../uploads/' }); // Files will be temporarily sto
 
 // Route to upload a file to S3 and save metadata in MongoDB
 router.post('/upload', authenticateToken(['admin']), upload.single('file'), async (req, res) => {
-    try {
+  try {
       const file = req.file; // The uploaded file
       const author = req.body.author || 'Unknown'; // Optional author field
       const title = req.body.title || file.originalname; // User-provided title or default to original name
+      const tags = req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : []; // Extract and split tags
+      const categories = req.body.categories ? req.body.categories.split(',').map(cat => cat.trim()) : ['uncategorized']; // Extract and split categories
 
       if (!file) {
-        return res.status(400).json({ message: 'No file uploaded' });
+          return res.status(400).json({ message: 'No file uploaded' });
       }
-   // Generate a unique key for S3 by appending a timestamp or UUID
-   const uniqueKey = `uploads/${uuidv4()}-${file.originalname}`; // Generates a unique key using UUID
+
+      // Generate a unique key for S3 by appending a timestamp or UUID
+      const uniqueKey = `uploads/${uuidv4()}-${file.originalname}`; // Generates a unique key using UUID
 
       // Upload file to S3
       const s3Key = `uploads/${file.originalname}`; // The key (file name + path in S3)
       const s3Data = await s3Service.uploadFile(file.path, uniqueKey); // File uploaded from temporary path
-  
+
       // Save file metadata in MongoDB
       const newFile = new File({
-        fileName: title, 
-        s3Key: s3Data.Key,
-        author: author,
-        s3Bucket: s3Data.Bucket,
-        fileSize: file.size, // File size from multer
-        fileType: file.mimetype, // MIME type from multer
+          fileName: title, 
+          s3Key: s3Data.Key,
+          author: author,
+          s3Bucket: s3Data.Bucket,
+          fileSize: file.size, // File size from multer
+          fileType: file.mimetype, // MIME type from multer
+          tags: tags, // Add tags to the file metadata
+          categories: categories, // Add categories to the file metadata
       });
-  
+
       await newFile.save();
-  
+
       res.status(201).json({ message: 'File uploaded and metadata saved successfully', file: newFile });
-    } catch (err) {
+  } catch (err) {
       console.error('Error in upload:', err);
       res.status(500).json({ message: 'Error uploading file', error: err.message });
-    }
-  });
+  }
+});
+
 
 // Route to download a file from S3 using the File model's ID
 // Route to download the file from S3 using the File model's ID
-router.get('/download/:id', authenticateToken(['admin']), async (req, res) => {
+router.get('/download/:id',authenticateToken(['member', 'admin']), async (req, res) => {
   try {
       const fileId = req.params.id;
 
@@ -105,8 +111,8 @@ router.delete('/:id', authenticateToken(['admin']), async (req, res) => {
 });
 
 
-  // Route to get file metadata by file ID
-router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
+// Route to get file metadata by file ID
+router.get('/:id/metadata', authenticateToken(['member', 'admin']), async (req, res) => {
   try {
       const fileId = req.params.id;
 
@@ -117,16 +123,47 @@ router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
           return res.status(404).json({ message: 'File not found' });
       }
 
-      // Send file metadata (including the filename)
+      // Send file metadata (including the filename, tags, and categories)
       res.status(200).json({
           fileName: fileRecord.fileName,
           fileType: fileRecord.fileType,
           author: fileRecord.author,
-          uploadDate: fileRecord.uploadDate
+          uploadDate: fileRecord.uploadDate,
+          tags: fileRecord.tags, // Include tags in response
+          categories: fileRecord.categories // Include categories in response
       });
   } catch (err) {
       console.error('Error retrieving file metadata:', err);
       res.status(500).json({ message: 'Error retrieving file metadata', error: err.message });
+  }
+});
+
+// Route to update file attributes (fileName, author, tags, categories) by file ID
+router.put('/:id', authenticateToken(['admin']), async (req, res) => {
+  try {
+      const fileId = req.params.id;
+
+      // Find the file by ID
+      const fileRecord = await File.findById(fileId);
+
+      if (!fileRecord) {
+          return res.status(404).json({ message: 'File not found' });
+      }
+
+      // Update file attributes if provided in the request body
+      if (req.body.fileName) fileRecord.fileName = req.body.fileName;
+      if (req.body.author) fileRecord.author = req.body.author;
+      if (req.body.tags) fileRecord.tags = req.body.tags.split(',').map(tag => tag.trim());
+      if (req.body.categories) fileRecord.categories = req.body.categories.split(',').map(cat => cat.trim());
+
+      // Save the updated record to the database
+      await fileRecord.save();
+
+      // Send back the updated file record
+      res.status(200).json({ message: 'File attributes updated successfully', file: fileRecord });
+  } catch (err) {
+      console.error('Error updating file attributes:', err);
+      res.status(500).json({ message: 'Error updating file attributes', error: err.message });
   }
 });
 
@@ -147,7 +184,7 @@ router.get('/:id/metadata', authenticateToken(['admin']), async (req, res) => {
 // });
 
 // Route to list all files from the MongoDB model, excluding s3Key and s3Bucket
-router.get('/', authenticateToken(['admin']), async (req, res) => {
+router.get('/', authenticateToken(['member', 'admin']), async (req, res) => {
     try {
         // Create an empty filter object
         let filter = {};
