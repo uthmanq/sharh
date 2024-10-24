@@ -13,7 +13,7 @@ const uploadFile = async (filePath, s3Key) => {
     const fileContent = fs.readFileSync(filePath);
 
     const params = {
-      Bucket: 'sharh-app', // Your bucket name
+      Bucket: 'sharh-app-pdfs', // Your bucket name
       Key: s3Key, // The key (file name with path) in the S3 bucket
       Body: fileContent,
     };
@@ -31,7 +31,7 @@ const uploadFile = async (filePath, s3Key) => {
 const downloadFile = async (s3Key, downloadPath) => {
   try {
     const params = {
-      Bucket: 'sharh-app', // Your bucket name
+      Bucket: 'sharh-app-pdfs', // Your bucket name
       Key: s3Key, // The key (file name with path) in the S3 bucket
     };
 
@@ -48,7 +48,7 @@ const downloadFile = async (s3Key, downloadPath) => {
 // Function to download a file from S3 as a stream (for piping directly to response)
 const getFileStream = (s3Key) => {
     const params = {
-      Bucket: 'sharh-app', // Your bucket name
+      Bucket: 'sharh-app-pdfs', // Your bucket name
       Key: s3Key, // The S3 key (file path)
     };
     return s3.getObject(params).createReadStream(); // Return the S3 file stream
@@ -58,7 +58,7 @@ const getFileStream = (s3Key) => {
 // Function to list all objects in the S3 bucket
 const listFiles = async () => {
   const params = {
-    Bucket: 'sharh-app', // Your bucket name
+    Bucket: 'sharh-app-pdfs', // Your bucket name
   };
 
   try {
@@ -75,7 +75,7 @@ const listFiles = async () => {
 const deleteFile = async (s3Key) => {
   try {
     const params = {
-      Bucket: 'sharh-app', // Your bucket name
+      Bucket: 'sharh-app-pdfs', // Your bucket name
       Key: s3Key, // The key (file name with path) in the S3 bucket
     };
 
