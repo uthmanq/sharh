@@ -34,9 +34,25 @@ const FileSchema = new Schema({
     type: [String], // Optional: Array of strings for categories
     default: [], // Default to an empty array if not provided
   },
+  createdDate: {
+    type: Date, // Date when the file document was created
+    default: Date.now // Set to current date by default
+  },
+  updatedDate: {
+    type: Date // Date when the file document was last updated
+  }
 });
 
 // Create a text index on fileName, author, tags, and categories
 FileSchema.index({ fileName: 'text', author: 'text', tags: 'text', categories: 'text' });
+
+// Pre-save middleware to set updatedDate when a document is updated
+FileSchema.pre('save', function (next) {
+  if (this.isNew) {
+    this.createdDate = Date.now(); // Set createdDate only if the document is new
+  }
+  this.updatedDate = Date.now(); // Always update the updatedDate when saving
+  next();
+});
 
 module.exports = mongoose.model('File', FileSchema);
