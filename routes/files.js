@@ -51,7 +51,6 @@ router.post('/upload', authenticateToken(['admin']), upload.single('file'), asyn
 });
 
 
-// Route to download a file from S3 using the File model's ID
 // Route to download the file from S3 using the File model's ID
 router.get('/download/:id',authenticateToken(['member', 'admin']), async (req, res) => {
   try {
@@ -82,6 +81,31 @@ router.get('/download/:id',authenticateToken(['member', 'admin']), async (req, r
       res.status(500).json({ message: 'Error retrieving file', error: err.message });
   }
 });
+
+// Route to generate a pre-signed URL for viewing the file
+router.get('/view/:id', authenticateToken(['member', 'admin']), async (req, res) => {
+    try {
+      const fileId = req.params.id;
+  
+      // Fetch the file metadata from MongoDB by ID
+      const fileRecord = await File.findById(fileId);
+  
+      if (!fileRecord) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+  
+      const s3Key = fileRecord.s3Key;
+  
+      // Generate a pre-signed URL for viewing
+      const presignedUrl = await s3Service.getPresignedUrl(s3Key, 300); // URL valid for 5 minutes
+  
+      res.json({ url: presignedUrl });
+    } catch (err) {
+      console.error('Error generating pre-signed URL:', err);
+      res.status(500).json({ message: 'Error generating view link', error: err.message });
+    }
+  });
+  
 
 // Route to delete a file by ID (from both S3 and MongoDB)
 router.delete('/:id', authenticateToken(['admin']), async (req, res) => {

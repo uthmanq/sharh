@@ -90,11 +90,32 @@ const deleteFile = async (s3Key) => {
 
 
 
-// Export the functions for use in other modules
-module.exports = {
-  uploadFile,
-  downloadFile,
-  listFiles,
-  getFileStream,
-  deleteFile
-};
+// Function to get a pre-signed URL for viewing the file
+const getPresignedUrl = async (s3Key, expiresIn = 60) => {
+    try {
+      const params = {
+        Bucket: 'sharh-app-pdfs', // Your bucket name
+        Key: s3Key, // The key (file name with path) in the S3 bucket
+        Expires: expiresIn, // Expiration time in seconds (default is 60)
+        ResponseContentDisposition: 'inline' // Makes the file viewable in the browser
+      };
+  
+      const url = await s3.getSignedUrlPromise('getObject', params);
+      console.log('Generated pre-signed URL:', url);
+      return url;
+    } catch (err) {
+      console.error('Error generating pre-signed URL:', err.message);
+      throw err; // Throw the error to be handled in the API
+    }
+  };
+  
+  // Export the new function as well
+  module.exports = {
+    uploadFile,
+    downloadFile,
+    listFiles,
+    getFileStream,
+    deleteFile,
+    getPresignedUrl // New pre-signed URL function
+  };
+  
