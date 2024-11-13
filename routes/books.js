@@ -435,7 +435,7 @@ router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) 
             id: updatedBook._id,
             title: updatedBook.title,
             author: updatedBook.author,
-            visibility: updatedBook.visiblity,
+            visibility: updatedBook.visibility,
             metadata: updatedBook.metadata || {},
             lines: updatedBook.lines.map(line => {
                 return {
