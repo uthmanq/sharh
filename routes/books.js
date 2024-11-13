@@ -416,7 +416,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken(['editor', 'admin']),
 
 // PUT /:bookId (Edit Metadata and Book Title)
 router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) => {
-    const { title, author, metadata, visiblity } = req.body;
+    const { title, author, metadata, visibility } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
     try {
@@ -429,7 +429,7 @@ router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) 
         if (title) book.title = title;
         if (author) book.author = author;
         if (metadata) book.metadata = metadata;
-        if (visiblity) book.visiblity = visibility;
+        if (visibility) book.visibility = visibility;
         const updatedBook = await book.save();
         const formattedBook = {
             id: updatedBook._id,
