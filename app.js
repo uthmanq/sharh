@@ -47,7 +47,7 @@ app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
 app.use('/stripe', stripeRoutes);
 app.use('/files', fileRoutes);
-app.use('/bookmarks',bookmarkRoutes);
+app.use('/bookmarks', bookmarkRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

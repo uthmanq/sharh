@@ -84,3 +84,5 @@ router.delete('/:bookmarkId', authenticateToken(['editor', 'admin', 'member']), 
         res.status(500).send('Internal Server Error');
     }
 });
+
+module.exports = router;
