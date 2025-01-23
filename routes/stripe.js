@@ -27,7 +27,7 @@ router.post('/create-checkout-session', authenticateToken(['member', 'editor', '
     res.json({ id: session.id });
   } catch (error) {
     console.error(error);
-    res.status(500).send('Internal Server Error');
+    res.status(500).send('Internal Server Error. Unable to complete request.');
   }
 });
 
