@@ -18,6 +18,48 @@ router.get('/:bookId', authenticateToken(['editor', 'admin', 'member']), async (
     }
 });
 
+// Get all bookmarks for a user
+router.get('/user/all', authenticateToken(['editor', 'admin', 'member']), async (req, res) => {
+    try {
+        const bookmarks = await Bookmark.find({
+            user: req.user._id
+        })
+        .populate('book', 'title')
+        .populate({
+            path: 'book',
+            select: 'lines',
+            populate: {
+                path: 'lines',
+                match: { 'lines._id': '$lineId' },
+                select: 'Arabic English'
+            }
+        })
+        .sort('-createdAt');
+
+        // Format response to include line details
+        const formattedBookmarks = bookmarks.map(bookmark => {
+            const line = bookmark.book.lines.find(l => l._id.toString() === bookmark.lineId.toString());
+            return {
+                _id: bookmark._id,
+                bookId: bookmark.book._id,
+                bookTitle: bookmark.book.title,
+                lineId: bookmark.lineId,
+                notes: bookmark.notes,
+                createdAt: bookmark.createdAt,
+                line: line ? {
+                    Arabic: line.Arabic,
+                    English: line.English
+                } : null
+            };
+        });
+
+        res.json({ bookmarks: formattedBookmarks });
+    } catch (err) {
+        console.error('Error fetching bookmarks:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // Create new bookmark
 router.post('/', authenticateToken(['editor', 'admin', 'member']), async (req, res) => {
     const { bookId, lineId, notes } = req.body;
