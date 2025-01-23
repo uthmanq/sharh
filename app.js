@@ -41,12 +41,13 @@ const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
 const stripeRoutes = require('./routes/stripe');
 const fileRoutes = require('./routes/files');
-
+const bookmarkRoutes = require('./routes/bookmarks');
 // Use Routes
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
 app.use('/stripe', stripeRoutes);
 app.use('/files', fileRoutes);
+app.use('/bookmarks',bookmarkRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
