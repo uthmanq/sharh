@@ -6,7 +6,7 @@ const authenticateToken = require('../middleware/authenticate');
 const router = express.Router();
 
 
-router.post('/create-checkout-session', authenticateToken(['member']), async (req, res) => {
+router.post('/create-checkout-session', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
   const { priceId } = req.body;
 
   try {
