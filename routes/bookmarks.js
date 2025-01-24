@@ -36,7 +36,7 @@ router.get('/user/all', authenticateToken(['editor', 'admin', 'member']), async 
                 _id: bookmark._id,
                 bookId: bookmark.book._id,
                 bookTitle: bookmark.book.title,
-                lineId: bookmark.lineId,
+                lineId: line._id,
                 notes: bookmark.notes,
                 createdAt: bookmark.createdAt,
                 line: line ? {
