@@ -24,21 +24,14 @@ router.get('/user/all', authenticateToken(['editor', 'admin', 'member']), async 
         const bookmarks = await Bookmark.find({
             user: req.user._id
         })
-        .populate('book', 'title')
         .populate({
             path: 'book',
-            select: 'lines',
-            populate: {
-                path: 'lines',
-                match: { 'lines._id': '$lineId' },
-                select: 'Arabic English'
-            }
+            select: 'title lines'
         })
         .sort('-createdAt');
 
-        // Format response to include line details
         const formattedBookmarks = bookmarks.map(bookmark => {
-            const line = bookmark.book.lines.find(l => l._id.toString() === bookmark.lineId.toString());
+            const line = bookmark.book.lines[bookmark.lineId];
             return {
                 _id: bookmark._id,
                 bookId: bookmark.book._id,
@@ -48,7 +41,9 @@ router.get('/user/all', authenticateToken(['editor', 'admin', 'member']), async 
                 createdAt: bookmark.createdAt,
                 line: line ? {
                     Arabic: line.Arabic,
-                    English: line.English
+                    English: line.English,
+                    commentary: line.commentary,
+                    rootwords: line.rootwords
                 } : null
             };
         });
