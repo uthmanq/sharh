@@ -38,8 +38,25 @@ router.get('/search', async (req, res) => {
     if (!q) {
         return res.status(400).send('Bad Request: Missing query parameter');
     }
+
     try {
-        const books = await Book.find({
+        // Get token from header
+        const token = req.header('Authorization')?.split(' ')[1];
+        let user = null;
+
+        // Verify token if provided
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, SECRET_KEY);
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // Token invalid - treat as public access
+                console.error('Invalid token:', err);
+            }
+        }
+
+        // Build query based on user role
+        let query = {
             $or: [
                 { title: { $regex: q, $options: 'i' } },
                 { author: { $regex: q, $options: 'i' } },
@@ -47,9 +64,26 @@ router.get('/search', async (req, res) => {
                 { 'lines.English': { $regex: q, $options: 'i' } },
                 { 'lines.commentary': { $regex: q, $options: 'i' } },
                 { 'lines.rootwords': { $regex: q, $options: 'i' } }
-            ],
-            'metadata.hidden': { $ne: true }
-        });
+            ]
+        };
+
+        // Add visibility filters based on role
+        if (!user) {
+            // Public access - only show public books
+            query.visibility = 'public';
+        } else if (user.roles.includes('admin')) {
+            // Admin access - show all books
+            // No additional filters needed
+        } else if (user.roles.includes('member')) {
+            // Member access - show public books and owned books
+            query.$or.push(
+                { visibility: 'public' },
+                { owner: user._id },
+                { contributors: user._id }
+            );
+        }
+
+        const books = await Book.find(query);
 
         const formattedBooks = books.map(book => {
             const matchingLines = book.lines.filter(line => 
