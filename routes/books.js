@@ -21,19 +21,18 @@ const User = require('../models/User'); // Ensure you have the User model import
 // const upload = multer({ storage: storage });
 
 const getExcerpt = (text, query, contextLength = 35) => {
-    const regex = new RegExp(`(.{0,${contextLength}}\\b)\\b(${query})\\b(\\b.{0,${contextLength}})`, 'i');
-    const match = text.match(regex);
-    if (match) {
-        const before = match[1] ? match[1].split(' ') : [];
-        const after = match[3] ? match[3].split(' ') : [];
-        
-        // Join before and after with proper context length
-        const beforeText = before.slice(-(contextLength)).join(' ');
-        const afterText = after.slice(0, contextLength).join(' ');
-        
-        return `${beforeText} ${match[2]} ${afterText}`.trim();
-    }
-    return null;
+    const index = text.toLowerCase().indexOf(query.toLowerCase());
+    if (index === -1) return null;
+    
+    let start = Math.max(0, index - contextLength);
+    let end = Math.min(text.length, index + query.length + contextLength);
+    
+    // Adjust to word boundaries
+    start = text.lastIndexOf(' ', start) + 1;
+    end = text.indexOf(' ', end);
+    if (end === -1) end = text.length;
+    
+    return text.slice(start, end).trim();
 };
 
 router.get('/search', async (req, res) => {
