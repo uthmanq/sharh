@@ -69,12 +69,15 @@ router.get('/search', async (req, res) => {
 
         // Add visibility filters based on role
         if (!user) {
+            console.log("public")
             // Public access - only show public books
             query.visibility = 'public';
         } else if (user.roles.includes('admin')) {
+            console.log("admin")
             // Admin access - show all books
             // No additional filters needed
         } else if (user.roles.includes('member')) {
+            console.log("member")
             // Member access - show public books and owned books
             query.$or.push(
                 { visibility: 'public' },
