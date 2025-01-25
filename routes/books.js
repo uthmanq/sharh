@@ -5,6 +5,9 @@ const Book = require('../models/Book')
 const authenticateToken = require('../middleware/authenticate')
 const multer = require('multer');
 const AWS = require('aws-sdk');
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = process.env.SECRET_KEY;
+const User = require('../models/User'); // Ensure you have the User model imported
 
 // Configure AWS SDK for the new bucket
 // const s3 = new AWS.S3({
