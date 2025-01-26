@@ -26,6 +26,9 @@ const FileSchema = new Schema({
   fileType: {
     type: String, // Optional: MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
   },
+  description: {
+    type: String, // Optional: MIME type of the file (e.g., 'application/pdf', 'image/jpeg')
+  },
   tags: {
     type: [String], // Optional: Array of strings for tags
     default: [], // Default to an empty array if not provided
@@ -33,6 +36,12 @@ const FileSchema = new Schema({
   categories: {
     type: [String], // Optional: Array of strings for categories
     default: [], // Default to an empty array if not provided
+  },
+  visibility: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'private',
+    required: true
   },
   createdDate: {
     type: Date, // Date when the file document was created
