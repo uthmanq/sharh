@@ -364,7 +364,7 @@ router.get('/:bookId/lines', async (req, res) => {
 });
 
 // POST /:bookId/lines
-router.post('/:bookId/lines', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
+router.post('/:bookId/lines', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const position = req.body.position;
     const newLine = req.body.newLine;
     if (!newLine || !newLine.Arabic || !newLine.English) {
