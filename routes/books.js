@@ -256,7 +256,7 @@ router.get('/:bookId', async (req, res) => {
         // Get token from header (if it exists)
         const token = req.header('Authorization')?.split(' ')[1];
         let currentUser = null;
-
+        console.log('request made');
         // Verify token if provided
         if (token) {
             try {
