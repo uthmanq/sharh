@@ -262,9 +262,10 @@ router.get('/:bookId', async (req, res) => {
             try {
                 const decoded = jwt.verify(token, SECRET_KEY);
                 currentUser = await User.findById(decoded.id);
+                console.log(currentUser.username, "requested book");
             } catch (err) {
                 // Token invalid - treat as public access
-                //console.error('Invalid token:', err);
+                console.error('Invalid token:', err);
             }
         }
 
