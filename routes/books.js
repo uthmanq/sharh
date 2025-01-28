@@ -457,7 +457,7 @@ router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), Edi
 });
 
 // DELETE /:bookId/lines/:lineId
-router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
+router.delete('/:bookId/lines/:lineId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId);
         if (!book) {
@@ -476,7 +476,7 @@ router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), 
 });
 
 // Move Line
-router.put('/:bookId/lines/:index/move', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
+router.put('/:bookId/lines/:index/move', authenticateToken(['member','editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const fromIndex = parseInt(req.body.fromIndex);
     const toIndex = parseInt(req.body.toIndex);
     const bookId = req.params.bookId;
