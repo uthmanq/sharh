@@ -8,7 +8,7 @@ const AWS = require('aws-sdk');
 const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
 const User = require('../models/User'); // Ensure you have the User model imported
-
+const EditGuard = require('../middleware/editguard')
 // Configure AWS SDK for the new bucket
 // const s3 = new AWS.S3({
 //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -172,7 +172,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.get('/mybooks', authenticateToken(['user', 'editor', 'admin']), async (req, res) => {
+router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
     try {
         // Find books where the logged-in user is the owner or a contributor
         const books = await Book.find({
@@ -211,7 +211,7 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'admin']), async (re
 
 
 // POST 
-router.post('/', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.post('/', authenticateToken(['member','editor', 'admin']), async (req, res) => {
     const newBookData = {
         ...req.body.newBook,
         owner: req.user._id // Assuming req.user contains the authenticated user's data
@@ -311,7 +311,7 @@ router.get('/:bookId/lines', async (req, res) => {
 });
 
 // POST /:bookId/lines
-router.post('/:bookId/lines', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.post('/:bookId/lines', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const position = req.body.position;
     const newLine = req.body.newLine;
     if (!newLine || !newLine.Arabic || !newLine.English) {
@@ -373,7 +373,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 });
 
 // PUT /:bookId/lines/:lineId
-router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const updatedLine = req.body.updatedLine;
     if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
         return res.status(400).send('Bad Request: Missing required fields');
@@ -404,7 +404,7 @@ router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), asy
 });
 
 // DELETE /:bookId/lines/:lineId
-router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     try {
         const book = await Book.findById(req.params.bookId);
         if (!book) {
@@ -423,7 +423,7 @@ router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), 
 });
 
 // Move Line
-router.put('/:bookId/lines/:index/move', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.put('/:bookId/lines/:index/move', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const fromIndex = parseInt(req.body.fromIndex);
     const toIndex = parseInt(req.body.toIndex);
     const bookId = req.params.bookId;

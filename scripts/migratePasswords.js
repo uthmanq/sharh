@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
-const User = require('./models/User'); // Adjust the path if necessary
+const User = require('../models/User'); // Adjust the path if necessary
 
 const DBNAME = process.env.DBNAME;
 const DBADDRESS = process.env.DBADDRESS;
