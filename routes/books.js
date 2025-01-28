@@ -253,30 +253,82 @@ router.post('/', authenticateToken(['member','editor', 'admin']), async (req, re
 // GET /:bookId
 router.get('/:bookId', async (req, res) => {
     try {
-        const book = await Book.findById(req.params.bookId);
+        // Get token from header (if it exists)
+        const token = req.header('Authorization')?.split(' ')[1];
+        let currentUser = null;
+
+        // Verify token if provided
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, SECRET_KEY);
+                currentUser = await User.findById(decoded.id);
+            } catch (err) {
+                // Token invalid - treat as public access
+                //console.error('Invalid token:', err);
+            }
+        }
+
+        // Fetch book with populated owner and contributors
+        const book = await Book.findById(req.params.bookId)
+            .populate('owner', 'username email') // Only select necessary fields
+            .populate('contributors', 'username email');
+
         if (!book) {
             return res.status(404).send('Not Found: No book with the given ID exists');
         }
+
+        // Get all users with admin role
+        const adminUsers = await User.find({ roles: 'admin' }, 'username email');
+
+        // Determine if current user can edit
+        let canEdit = false;
+        if (currentUser) {
+            canEdit = currentUser.roles.includes('admin') || 
+                     book.owner._id.equals(currentUser._id) || 
+                     book.contributors.some(contributor => contributor._id.equals(currentUser._id));
+        }
+
+        // Format editors list
+        const editors = {
+            owner: {
+                id: book.owner._id,
+                username: book.owner.username,
+                email: book.owner.email
+            },
+            contributors: book.contributors.map(contributor => ({
+                id: contributor._id,
+                username: contributor.username,
+                email: contributor.email
+            })),
+            admins: adminUsers.map(admin => ({
+                id: admin._id,
+                username: admin.username,
+                email: admin.email
+            }))
+        };
+
         const formattedBook = {
             id: book._id,
             title: book.title,
             author: book.author,
             visibility: book.visibility,
             metadata: book.metadata || {},
-            lines: book.lines.map(line => {
-                return {
-                    id: line._id,
-                    Arabic: line.Arabic,
-                    English: line.English,
-                    commentary: line.commentary || "",
-                    rootwords: line.rootwords || ""
-                };
-            }),
-            lastUpdated: book.lastUpdated
+            lines: book.lines.map(line => ({
+                id: line._id,
+                Arabic: line.Arabic,
+                English: line.English,
+                commentary: line.commentary || "",
+                rootwords: line.rootwords || ""
+            })),
+            lastUpdated: book.lastUpdated,
+            editors: editors,
+            canEdit: canEdit
         };
+
         res.json(formattedBook);
     } catch (err) {
-        res.status(500).send('Internal Server Error (3)');
+        console.error('Error fetching book:', err);
+        res.status(500).send('Internal Server Error');
     }
 });
 
