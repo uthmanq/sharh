@@ -31,6 +31,14 @@ const bookSchema = new mongoose.Schema({
     lastUpdated: { 
         type: Date, 
         default: Date.now 
+    },
+    category: {
+        type: String,
+        default: ['Uncategorized']
+    },
+    translator: {
+        type: String,
+        default: ['Unknown']
     }
 });
 
