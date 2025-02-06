@@ -39,7 +39,12 @@ const bookSchema = new mongoose.Schema({
     translator: {
         type: String,
         default: 'Unknown'
-    }
+    },
+    progress: {
+        type: String,
+        enum: ['In Progress', 'Near Complete', 'Complete'],
+        default: 'In Progress',
+      }
 });
 
 // Middleware to update 'lastUpdated' before each save

@@ -156,6 +156,7 @@ router.get('/', async (req, res) => {
                 metadata: book.metadata || {},
                 lastUpdated: book.lastUpdated,
                 translator: book.translator,
+                progress: book.progress,
                 category: book.category
                // lines: book.lines.map(line => {
                //     return {
@@ -192,6 +193,7 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
                 author: book.author,
                 metadata: book.metadata || {},
                 translator: book.translator,
+                progress: book.progress,
                 category: book.category
                 // Uncomment if you want to include lines in the response
                 // lines: book.lines.map(line => {
@@ -248,6 +250,7 @@ router.post('/', authenticateToken(['member','editor', 'admin']), async (req, re
             owner: req.user,
             category: req.category,
             translator: req.translator,
+            progress: req.progress,
             category: req.category
         };
         res.status(201).json(formattedBook);
@@ -331,6 +334,7 @@ router.get('/:bookId', async (req, res) => {
             lastUpdated: book.lastUpdated,
             editors: editors,
             translator: book.translator,
+            progress: book.progress,
             category: book.category,
             canEdit: canEdit
         };
@@ -366,8 +370,9 @@ router.get('/:bookId/lines', async (req, res) => {
             author: book.author,
             metadata: book.metadata || {},
             lines: formattedLines,
-            categogry: book.category,
-            translator: book.translator
+            category: book.category,
+            translator: book.translator,
+            progress: book.progress
         });
     } catch (err) {
         res.status(500).send('Internal Server Error (4)');
@@ -519,7 +524,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken(['member','editor', '
 
 // PUT /:bookId (Edit Metadata and Book Title)
 router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
-    const { title, author, metadata, visibility, category, translator } = req.body;
+    const { title, author, metadata, visibility, category, translator, progress } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
     try {
@@ -534,6 +539,7 @@ router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGua
         if (metadata) book.metadata = metadata;
         if (category) book.category = category;
         if (translator) book.translator = translator;
+        if (progress) book.progress = progress;
         if(req.user.roles.includes('admin')){
         if (visibility) book.visibility = visibility;
         }
