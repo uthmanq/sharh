@@ -426,7 +426,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 });
 
 // PUT /:bookId/lines/:lineId
-router.put('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
+router.put('/:bookId/lines/:lineId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const updatedLine = req.body.updatedLine;
     if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
         return res.status(400).send('Bad Request: Missing required fields');
@@ -507,7 +507,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken(['member','editor', '
 });
 
 // PUT /:bookId (Edit Metadata and Book Title)
-router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) => {
+router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const { title, author, metadata, visibility } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
@@ -521,7 +521,9 @@ router.put('/:bookId', authenticateToken(['editor', 'admin']), async (req, res) 
         if (title) book.title = title;
         if (author) book.author = author;
         if (metadata) book.metadata = metadata;
+        if(req.user.roles.includes('admin')){
         if (visibility) book.visibility = visibility;
+        }
         const updatedBook = await book.save();
         const formattedBook = {
             id: updatedBook._id,
