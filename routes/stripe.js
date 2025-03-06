@@ -1,7 +1,8 @@
 // server.js or your main server file
 const express = require('express');
 require('dotenv').config();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripeConfig = require('../config/stripeConfig')
+const stripe = require('stripe')(stripeConfig.secretKey);
 const authenticateToken = require('../middleware/authenticate');
 const router = express.Router();
 

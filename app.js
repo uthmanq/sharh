@@ -14,6 +14,15 @@ const ENVIRONMENT = process.env.ENVIRONMENT || 'development';
 const DBNAME = process.env.DBNAME;
 const DBADDRESS = process.env.DBADDRESS;
 
+const args = process.argv.slice(2); // Get command-line arguments
+if (args.includes('--teststripe')) {
+  process.env.STRIPE_ENV = 'test';
+  console.log('Stripe Env is set to ', process.env.STRIPE_ENV);
+} else {
+  process.env.STRIPE_ENV = 'live';
+  console.log('Stripe Env is set to ', process.env.STRIPE_SECRET_KEY);
+}
+
 // Middleware
 app.use(bodyParser.json());
 
