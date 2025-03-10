@@ -197,6 +197,54 @@ router.post('/payment-methods/create-setup-intent', authenticateToken(['member',
   }
 });
 
+// Get total number of active subscriptions (admin only)
+router.get('/subscriptions/count',  async (req, res) => {
+  try {
+    // We need to paginate through all subscriptions to get an accurate count
+    let hasMore = true;
+    let startingAfter = null;
+    let totalActiveSubscriptions = 0;
+    const limit = 100; // Maximum allowed by Stripe API per request
+    
+    while (hasMore) {
+      // Build query parameters
+      const queryParams = {
+        limit: limit,
+        status: 'active', // Only count active subscriptions
+      };
+      
+      // Add pagination parameter if we're past the first page
+      if (startingAfter) {
+        queryParams.starting_after = startingAfter;
+      }
+      
+      // Fetch a page of subscriptions
+      const subscriptionsPage = await stripe.subscriptions.list(queryParams);
+      
+      // Add this page's count to our total
+      totalActiveSubscriptions += subscriptionsPage.data.length;
+      
+      // Check if there are more pages
+      hasMore = subscriptionsPage.has_more;
+      
+      // If there are more pages, set the starting point for the next request
+      if (hasMore && subscriptionsPage.data.length > 0) {
+        // Get the ID of the last subscription in the current page
+        startingAfter = subscriptionsPage.data[subscriptionsPage.data.length - 1].id;
+      }
+    }
+    
+    // Return the total count
+    res.json({
+      success: true,
+      active_subscriptions: totalActiveSubscriptions
+    });
+  } catch (error) {
+    console.error('Error counting subscriptions:', error);
+    res.status(500).send('Failed to retrieve subscription count');
+  }
+});
+
 // Update default payment method
 router.post('/payment-methods/set-default', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
   try {
