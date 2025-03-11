@@ -147,7 +147,8 @@ router.get('/search', async (req, res) => {
 // Other routes
 router.get('/', async (req, res) => {
     try {
-        const books = await Book.find({ visibility: 'public' });
+        const books = await Book.find({ visibility: 'public' })
+        .sort({ lastUpdated: -1 });
         const formattedBooks = books.map(book => {
             return {
                 id: book._id,
