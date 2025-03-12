@@ -40,6 +40,10 @@ const bookSchema = new mongoose.Schema({
         type: String,
         default: 'Unknown'
     },
+    description: {
+        type: String,
+        default: ''
+    },
     progress: {
         type: String,
         enum: ['In Progress', 'Near Complete', 'Complete'],

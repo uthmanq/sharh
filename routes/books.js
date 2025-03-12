@@ -203,7 +203,8 @@ router.get('/', async (req, res) => {
                 lastUpdated: book.lastUpdated,
                 translator: book.translator,
                 progress: book.progress,
-                category: book.category
+                category: book.category,
+                description: book.description
             };
         });
         
@@ -639,7 +640,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken(['member','editor', '
 
 // PUT /:bookId (Edit Metadata and Book Title)
 router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
-    const { title, author, metadata, visibility, category, translator, progress } = req.body;
+    const { title, author, metadata, visibility, category, translator, progress, description } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
     try {
@@ -655,6 +656,8 @@ router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGua
         if (category) book.category = category;
         if (translator) book.translator = translator;
         if (progress) book.progress = progress;
+        if (description) book.description = description;
+
         if(req.user.roles.includes('admin')){
         if (visibility) book.visibility = visibility;
         }
@@ -664,6 +667,7 @@ router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGua
             title: updatedBook.title,
             author: updatedBook.author,
             visibility: updatedBook.visibility,
+            description: updatedBook.description,
             metadata: updatedBook.metadata || {},
             lines: updatedBook.lines.map(line => {
                 return {
