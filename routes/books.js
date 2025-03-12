@@ -147,8 +147,43 @@ router.get('/search', async (req, res) => {
 // Other routes
 router.get('/', async (req, res) => {
     try {
-        const books = await Book.find({ visibility: 'public' })
-        .sort({ lastUpdated: -1 });
+        // Build query based on filter parameters
+        const query = { visibility: 'public' };
+        
+        // Filter by category if provided
+        if (req.query.category) {
+            query.category = req.query.category;
+        }
+        
+        // Filter by author if provided
+        if (req.query.author) {
+            query.author = { $regex: req.query.author, $options: 'i' }; // Case-insensitive search
+        }
+        
+        // Determine sort options
+        let sortOption = { lastUpdated: -1 }; // Default sort
+        
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case 'title_asc':
+                    sortOption = { title: 1 };
+                    break;
+                case 'title_desc':
+                    sortOption = { title: -1 };
+                    break;
+                case 'date_asc':
+                    sortOption = { lastUpdated: 1 };
+                    break;
+                case 'date_desc':
+                    sortOption = { lastUpdated: -1 };
+                    break;
+                default:
+                    sortOption = { lastUpdated: -1 }; // Default sort
+            }
+        }
+        
+        const books = await Book.find(query).sort(sortOption);
+        
         const formattedBooks = books.map(book => {
             return {
                 id: book._id,
@@ -159,33 +194,60 @@ router.get('/', async (req, res) => {
                 translator: book.translator,
                 progress: book.progress,
                 category: book.category
-               // lines: book.lines.map(line => {
-               //     return {
-               //         id: line._id,
-                 //       Arabic: line.Arabic,
-                   //     English: line.English,
-                     //   commentary: line.commentary || "",
-                    //    rootwords: line.rootwords || ""
-                  //  };
-             //   })
             };
         });
+        
         res.json({ books: formattedBooks });
     } catch (err) {
+        console.error(err);
         res.status(500).send('Internal Server Error (1)');
     }
 });
 
 router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
     try {
-        // Find books where the logged-in user is the owner or a contributor
-        const books = await Book.find({
+        // Base query: find books where the logged-in user is the owner or a contributor
+        const baseQuery = {
             $or: [
                 { owner: req.user._id },
                 { contributors: req.user._id }
             ]
-        });
-
+        };
+        
+        // Filter by category if provided
+        if (req.query.category) {
+            baseQuery.category = req.query.category;
+        }
+        
+        // Filter by author if provided
+        if (req.query.author) {
+            baseQuery.author = { $regex: req.query.author, $options: 'i' }; // Case-insensitive search
+        }
+        
+        // Determine sort options
+        let sortOption = { lastUpdated: -1 }; // Default sort
+        
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case 'title_asc':
+                    sortOption = { title: 1 };
+                    break;
+                case 'title_desc':
+                    sortOption = { title: -1 };
+                    break;
+                case 'date_asc':
+                    sortOption = { lastUpdated: 1 };
+                    break;
+                case 'date_desc':
+                    sortOption = { lastUpdated: -1 };
+                    break;
+                default:
+                    sortOption = { lastUpdated: -1 }; // Default sort
+            }
+        }
+        
+        const books = await Book.find(baseQuery).sort(sortOption);
+        
         // Format the books as needed
         const formattedBooks = books.map(book => {
             return {
@@ -196,26 +258,16 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
                 translator: book.translator,
                 progress: book.progress,
                 category: book.category
-                // Uncomment if you want to include lines in the response
-                // lines: book.lines.map(line => {
-                //     return {
-                //         id: line._id,
-                //         Arabic: line.Arabic,
-                //         English: line.English,
-                //         commentary: line.commentary || "",
-                //         rootwords: line.rootwords || ""
-                //     };
-                // })
             };
         });
-
+        
         // Send the formatted books as a response
         res.json({ books: formattedBooks });
     } catch (err) {
+        console.error(err);
         res.status(500).send('Internal Server Error (1)');
     }
 });
-
 
 // POST 
 router.post('/', authenticateToken(['member','editor', 'admin']), async (req, res) => {
