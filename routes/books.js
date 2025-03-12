@@ -279,6 +279,49 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
     }
 });
 
+// Add these new routes to fetch unique categories
+
+// Get unique categories from public books
+router.get('/categories', async (req, res) => {
+    try {
+        // Find all unique categories from public books
+        const categories = await Book.distinct('category', { visibility: 'public' });
+        
+        // Filter out null, undefined or empty categories
+        const validCategories = categories.filter(category => 
+            category && category.trim() !== ''
+        ).sort();
+        
+        res.json({ categories: validCategories });
+    } catch (err) {
+        console.error('Error fetching categories:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// Get unique categories from user's books
+router.get('/mybooks/categories', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
+    try {
+        // Find all unique categories from books where the user is owner or contributor
+        const categories = await Book.distinct('category', {
+            $or: [
+                { owner: req.user._id },
+                { contributors: req.user._id }
+            ]
+        });
+        
+        // Filter out null, undefined or empty categories
+        const validCategories = categories.filter(category => 
+            category && category.trim() !== ''
+        ).sort();
+        
+        res.json({ categories: validCategories });
+    } catch (err) {
+        console.error('Error fetching user book categories:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // POST 
 router.post('/', authenticateToken(['member','editor', 'admin']), async (req, res) => {
     const newBookData = {
