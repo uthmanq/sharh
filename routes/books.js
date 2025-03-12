@@ -152,7 +152,8 @@ router.get('/', async (req, res) => {
         
         // Filter by category if provided
         if (req.query.category) {
-            query.category = req.query.category;
+            // Use case-insensitive regex for partial matching
+            query.category = { $regex: req.query.category, $options: 'i' };
         }
         
         // Filter by author if provided
@@ -181,6 +182,10 @@ router.get('/', async (req, res) => {
                     sortOption = { lastUpdated: -1 }; // Default sort
             }
         }
+        
+        // Log the final query for debugging
+        console.log('Query:', JSON.stringify(query));
+        console.log('Sort:', JSON.stringify(sortOption));
         
         const books = await Book.find(query).sort(sortOption);
         
@@ -216,7 +221,8 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
         
         // Filter by category if provided
         if (req.query.category) {
-            baseQuery.category = req.query.category;
+            // Use case-insensitive regex for partial matching
+            baseQuery.category = { $regex: req.query.category, $options: 'i' };
         }
         
         // Filter by author if provided
@@ -245,6 +251,10 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
                     sortOption = { lastUpdated: -1 }; // Default sort
             }
         }
+        
+        // Log the final query for debugging
+        console.log('MyBooks Query:', JSON.stringify(baseQuery));
+        console.log('MyBooks Sort:', JSON.stringify(sortOption));
         
         const books = await Book.find(baseQuery).sort(sortOption);
         
