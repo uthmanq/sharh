@@ -21,8 +21,8 @@ router.post('/create-checkout-session', authenticateToken(['member', 'editor', '
       ],
       mode: 'subscription',
       customer: req.user.stripeCustomerId, // Use the stripeCustomerId from the authenticated user
-      success_url: `${req.headers.origin}/success`,
-      cancel_url: `${req.headers.origin}/cancel`,
+      success_url: `${req.headers.origin}/profile`,
+      cancel_url: `${req.headers.origin}/support`,
     });
 
     res.json({ id: session.id });
