@@ -144,21 +144,26 @@ router.get('/search', async (req, res) => {
 
 
 
-// Other routes
+// Update your existing routes to include title filtering
+
 router.get('/', async (req, res) => {
     try {
         // Build query based on filter parameters
         const query = { visibility: 'public' };
         
+        // Filter by title if provided
+        if (req.query.title) {
+            query.title = { $regex: req.query.title, $options: 'i' }; // Case-insensitive partial match
+        }
+        
         // Filter by category if provided
         if (req.query.category) {
-            // Use case-insensitive regex for partial matching
             query.category = { $regex: req.query.category, $options: 'i' };
         }
         
         // Filter by author if provided
         if (req.query.author) {
-            query.author = { $regex: req.query.author, $options: 'i' }; // Case-insensitive search
+            query.author = { $regex: req.query.author, $options: 'i' };
         }
         
         // Determine sort options
@@ -219,15 +224,19 @@ router.get('/mybooks', authenticateToken(['user', 'editor', 'member', 'admin']),
             ]
         };
         
+        // Filter by title if provided
+        if (req.query.title) {
+            baseQuery.title = { $regex: req.query.title, $options: 'i' }; // Case-insensitive partial match
+        }
+        
         // Filter by category if provided
         if (req.query.category) {
-            // Use case-insensitive regex for partial matching
             baseQuery.category = { $regex: req.query.category, $options: 'i' };
         }
         
         // Filter by author if provided
         if (req.query.author) {
-            baseQuery.author = { $regex: req.query.author, $options: 'i' }; // Case-insensitive search
+            baseQuery.author = { $regex: req.query.author, $options: 'i' };
         }
         
         // Determine sort options
