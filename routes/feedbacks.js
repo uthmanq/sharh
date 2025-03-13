@@ -129,10 +129,11 @@ router.post('/:feedbackId/logs', authenticateToken(['admin']), async (req, res) 
             return res.status(404).json({ message: 'Feedback not found' });
         }
         
-        // Add the log entry
+        // The middleware sets req.user with the full user object
+        // Use req.user._id instead of req.userId
         feedback.logs.push({
             message,
-            addedBy: req.userId
+            addedBy: req.user._id // Changed from req.userId to req.user._id
         });
         
         await feedback.save();
@@ -146,7 +147,7 @@ router.post('/:feedbackId/logs', authenticateToken(['admin']), async (req, res) 
         res.json(updatedFeedback);
     } catch (err) {
         console.error('Error adding log entry:', err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ message: 'Internal Server Error', error: err.message });
     }
 });
 
