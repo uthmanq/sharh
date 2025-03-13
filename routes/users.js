@@ -74,22 +74,39 @@ router.post('/signup', async (req, res) => {
 
 // POST Login Endpoint
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
+    const { identifier, password } = req.body; // Accepts either username or email as "identifier"
+
+    if (!identifier || !password) {
         return res.status(400).send('Bad Request: Missing required fields');
     }
+
     try {
-        const user = await User.findOne({ username });
+        // Search for user by username or email
+        const user = await User.findOne({ 
+            $or: [{ username: identifier }, { email: identifier }] 
+        });
+
         if (!user || !(await user.comparePassword(password))) {
-            return res.status(401).send('Unauthorized: Incorrect username or password');
+            return res.status(401).send('Unauthorized: Incorrect credentials');
         }
+
         const token = jwt.sign({ id: user._id }, SECRET_KEY);
-        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email, stripeCustomerId: user.stripeCustomerId, roles: user.roles } });
+        res.status(200).json({ 
+            token, 
+            user: { 
+                id: user._id, 
+                username: user.username, 
+                email: user.email, 
+                stripeCustomerId: user.stripeCustomerId, 
+                roles: user.roles 
+            } 
+        });
     } catch (err) {
         console.log(err);
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 // GET User Profile (Protected)
 router.get('/', authenticateToken(), async (req, res) => {
