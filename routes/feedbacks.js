@@ -49,7 +49,7 @@ router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res)
     const { status } = req.body;
 
     // Fix the status validation check to match the exact status values
-    if (!['New', 'InProgress', 'Completed', 'Removed'].includes(status)) {
+    if (!['New', 'In Progress', 'Completed', 'Removed'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status value' });
     }
 
