@@ -4,13 +4,13 @@ const Feedback = require('../models/Feedback');
 const authenticateToken = require('../middleware/authenticate');
 const getUserIdIfLoggedIn = require('../middleware/getUserIdIfLoggedIn');
 
-// Get all feedback (admin only)
+// Get all feedback basic info (admin only) - without expanded logs and detailed populations
 router.get('/', authenticateToken(['admin']), async (req, res) => {
     try {
         const feedback = await Feedback.find()
+            .select('-logs') // Exclude logs for the initial list view
             .populate('user', 'username email')
-            .populate('assignedTo', 'username email')
-            .populate('logs.addedBy', 'username email')
+            .populate('assignedTo', 'username')
             .sort('-createdAt');
         res.json({ feedback });
     } catch (err) {
@@ -48,7 +48,7 @@ router.post('/', getUserIdIfLoggedIn, async (req, res) => {
 router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res) => {
     const { status } = req.body;
 
-    if (!['New', 'In Progress', 'Completed', 'Removed'].includes(status)) {
+    if (!['New', 'InProgress', 'Completed', 'Removed'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status value' });
     }
 
@@ -62,14 +62,21 @@ router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res)
         // Add a log entry about the status change
         feedback.logs.push({
             message: `Status changed from "${feedback.status}" to "${status}"`,
-            addedBy: req.userId
+            addedBy: req.user._id
         });
         
         // Update the status
         feedback.status = status;
         
         await feedback.save();
-        res.json(feedback);
+        
+        // Return a minimal response without populating all the details
+        const updatedFeedback = {
+            _id: feedback._id,
+            status: feedback.status
+        };
+        
+        res.json(updatedFeedback);
     } catch (err) {
         console.error('Error updating feedback status:', err);
         res.status(500).send('Internal Server Error');
@@ -93,7 +100,7 @@ router.put('/:feedbackId/assign', authenticateToken(['admin']), async (req, res)
         
         feedback.logs.push({
             message: `Assignment ${previousAssignment} ${newAssignment}`,
-            addedBy: req.userId
+            addedBy: req.user._id
         });
         
         // Update the assignment
@@ -101,7 +108,7 @@ router.put('/:feedbackId/assign', authenticateToken(['admin']), async (req, res)
         
         await feedback.save();
         
-        // Return populated feedback
+        // Return populated feedback with full details since this is called from the card
         const updatedFeedback = await Feedback.findById(req.params.feedbackId)
             .populate('user', 'username email')
             .populate('assignedTo', 'username email')
@@ -130,15 +137,14 @@ router.post('/:feedbackId/logs', authenticateToken(['admin']), async (req, res) 
         }
         
         // The middleware sets req.user with the full user object
-        // Use req.user._id instead of req.userId
         feedback.logs.push({
             message,
-            addedBy: req.user._id // Changed from req.userId to req.user._id
+            addedBy: req.user._id
         });
         
         await feedback.save();
         
-        // Return populated feedback
+        // Return populated feedback with full details since this is called from the card
         const updatedFeedback = await Feedback.findById(req.params.feedbackId)
             .populate('user', 'username email')
             .populate('assignedTo', 'username email')
@@ -151,11 +157,11 @@ router.post('/:feedbackId/logs', authenticateToken(['admin']), async (req, res) 
     }
 });
 
-// Get a specific feedback item with populated fields
+// Get a specific feedback item with fully populated fields - for expanded card view
 router.get('/:feedbackId', authenticateToken(['admin']), async (req, res) => {
     try {
         const feedback = await Feedback.findById(req.params.feedbackId)
-            .populate('user', 'username email')
+            .populate('user', 'username email roles')
             .populate('assignedTo', 'username email')
             .populate('logs.addedBy', 'username email');
             
