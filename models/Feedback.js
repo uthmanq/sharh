@@ -1,6 +1,23 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+// Create a log entry schema for the logs array
+const logEntrySchema = new mongoose.Schema({
+    message: {
+        type: String,
+        required: true
+    },
+    addedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
 const feedbackSchema = new mongoose.Schema({
     type: {
         type: String,
@@ -25,6 +42,12 @@ const feedbackSchema = new mongoose.Schema({
         enum: ['New', 'In Progress', 'Completed', 'Removed'],
         default: 'New'
     },
+    assignedTo: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    logs: [logEntrySchema],
     createdAt: {
         type: Date,
         default: Date.now
