@@ -48,6 +48,7 @@ router.post('/', getUserIdIfLoggedIn, async (req, res) => {
 router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res) => {
     const { status } = req.body;
 
+    // Fix the status validation check to match the exact status values
     if (!['New', 'InProgress', 'Completed', 'Removed'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status value' });
     }
@@ -62,7 +63,7 @@ router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res)
         // Add a log entry about the status change
         feedback.logs.push({
             message: `Status changed from "${feedback.status}" to "${status}"`,
-            addedBy: req.user._id
+            addedBy: req.user._id // Fixed to use req.user._id for consistency
         });
         
         // Update the status
@@ -70,16 +71,22 @@ router.put('/:feedbackId/status', authenticateToken(['admin']), async (req, res)
         
         await feedback.save();
         
-        // Return a minimal response without populating all the details
+        // Return basic feedback data without unnecessary population
         const updatedFeedback = {
             _id: feedback._id,
-            status: feedback.status
+            status: feedback.status,
+            type: feedback.type,
+            details: feedback.details,
+            sitePage: feedback.sitePage,
+            user: feedback.user,
+            createdAt: feedback.createdAt,
+            assignedTo: feedback.assignedTo
         };
         
         res.json(updatedFeedback);
     } catch (err) {
         console.error('Error updating feedback status:', err);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ message: 'Internal Server Error', error: err.message });
     }
 });
 
