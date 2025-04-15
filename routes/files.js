@@ -408,6 +408,7 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
     }
 });
 // Route to get list of videos with filtering and pagination
+// Route to get list of videos with filtering and pagination
 router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) => {
     try {
         let filter = {};
@@ -448,7 +449,7 @@ router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) =
             filter.visibility = 'public';
         }
 
-        // Projection to exclude sensitive information
+        // Update projection to include thumbnailKey but exclude other sensitive info
         const projection = { 
             s3Key: 0, 
             s3Bucket: 0 
@@ -461,11 +462,29 @@ router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) =
             .limit(limit)
             .sort({ uploadDate: -1 });
 
+        // Generate thumbnail URLs for all videos
+        const videosWithThumbnails = await Promise.all(videos.map(async (video) => {
+            // Convert to plain object so we can modify it
+            const videoObj = video.toObject();
+            
+            // Generate a fresh thumbnail URL if we have a thumbnailKey
+            if (videoObj.thumbnailKey) {
+                try {
+                    videoObj.thumbnailUrl = await s3Service.getPresignedUrl(videoObj.thumbnailKey, 3600); // 1 hour expiry
+                } catch (err) {
+                    console.error(`Error generating thumbnail URL for video ${videoObj._id}:`, err);
+                    videoObj.thumbnailUrl = null;
+                }
+            }
+            
+            return videoObj;
+        }));
+
         // Get total count for pagination
         const totalVideos = await File.countDocuments(filter);
 
         res.status(200).json({ 
-            videos, 
+            videos: videosWithThumbnails, 
             currentPage: page, 
             totalPages: Math.ceil(totalVideos / limit),
             totalVideos 

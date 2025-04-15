@@ -20,6 +20,7 @@ mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
 async function generateVideoThumbnail(videoPath, outputPath) {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn('ffmpeg', [
+      '-y',                    // Add this flag to automatically overwrite existing files
       '-i', videoPath,
       '-ss', '00:00:02.000',  // Take frame at 2 seconds
       '-vframes', '1',        // Extract 1 frame
