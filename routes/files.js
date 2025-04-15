@@ -326,6 +326,7 @@ router.get('/', async (req, res) => {
 });
 
 // Route to upload a video to S3 and save metadata in MongoDB
+// Modified video upload route with improved thumbnail handling
 router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('video'), async (req, res) => {
     try {
         const file = req.file;
@@ -342,30 +343,35 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
             visibility = 'private'
         } = req.body;
 
-        // Generate a unique key for S3 using UUID
+        // Generate unique keys for S3
         const videoKey = `videos/${uuidv4()}-${file.originalname}`;
-
+        const thumbnailKey = `thumbnails/${uuidv4()}-${path.basename(file.originalname, path.extname(file.originalname))}.jpg`;
+        
         // Upload video to S3
         const s3Data = await s3Service.uploadFile(file.path, videoKey);
         
         // Create a temporary file for the thumbnail
         const tmpFile = await tmp.file({ postfix: '.jpg' });
         
-        // Generate thumbnail
-        await generateVideoThumbnail(file.path, tmpFile.path);
-        
-        // Upload thumbnail to S3
-        const thumbnailKey = `thumbnails/${uuidv4()}-${path.basename(file.originalname, path.extname(file.originalname))}.jpg`;
-        const thumbnailData = await s3Service.uploadFile(tmpFile.path, thumbnailKey);
-        
-        // Generate a pre-signed URL for the thumbnail or use a CloudFront distribution if available
-        const thumbnailUrl = await s3Service.getPresignedUrl(thumbnailKey, 31536000); // 1 year expiry
+        try {
+            // Generate thumbnail
+            await generateVideoThumbnail(file.path, tmpFile.path);
+            
+            // Upload thumbnail to S3
+            await s3Service.uploadFile(tmpFile.path, thumbnailKey);
+            
+            // Log successful thumbnail upload
+            console.log(`Successfully uploaded thumbnail to ${thumbnailKey}`);
+        } catch (thumbnailError) {
+            console.error('Error generating or uploading thumbnail:', thumbnailError);
+            // Continue with video processing even if thumbnail fails
+        }
         
         // Clean up temporary files
         await fs.unlink(file.path);
         await tmpFile.cleanup();
 
-        // Save video metadata in MongoDB
+        // Save video metadata in MongoDB - store just the thumbnail key
         const newVideo = new File({
             fileName: fileName,
             s3Key: s3Data.Key,
@@ -377,10 +383,13 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
             tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
             categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
             visibility: visibility,
-            thumbnailUrl: thumbnailUrl
+            thumbnailKey: thumbnailKey // Store the key instead of URL
         });
 
         await newVideo.save();
+
+        // Generate a fresh presigned URL for the response
+        const thumbnailUrl = await s3Service.getPresignedUrl(thumbnailKey, 3600); // 1 hour expiry for response
 
         res.status(201).json({ 
             message: 'Video uploaded successfully', 
@@ -389,7 +398,7 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
                 fileName: newVideo.fileName,
                 author: newVideo.author,
                 description: newVideo.description,
-                thumbnailUrl: newVideo.thumbnailUrl
+                thumbnailUrl: thumbnailUrl
             }
         });
     } catch (err) {
@@ -397,7 +406,6 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
         res.status(500).json({ message: 'Error uploading video', error: err.message });
     }
 });
-
 // Route to get list of videos with filtering and pagination
 router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) => {
     try {
@@ -468,6 +476,7 @@ router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) =
 });
 
 // Route to get video details
+// Route to get video details - modified to generate fresh thumbnail URL
 router.get('/videos/:id', authenticateToken(['member', 'admin']), async (req, res) => {
     try {
         const videoId = req.params.id;
@@ -479,8 +488,14 @@ router.get('/videos/:id', authenticateToken(['member', 'admin']), async (req, re
             return res.status(404).json({ message: 'Video not found' });
         }
 
-        // Generate a pre-signed URL for viewing
-        const presignedUrl = await s3Service.getPresignedUrl(videoRecord.s3Key, 3600); // URL valid for 1 hour
+        // Generate pre-signed URLs
+        const videoUrl = await s3Service.getPresignedUrl(videoRecord.s3Key, 3600); // 1 hour for video
+        
+        // Generate thumbnail URL if we have a thumbnail key
+        let thumbnailUrl = null;
+        if (videoRecord.thumbnailKey) {
+            thumbnailUrl = await s3Service.getPresignedUrl(videoRecord.thumbnailKey, 3600);
+        }
 
         // Check visibility and user authorization
         const token = req.header('Authorization')?.split(' ')[1];
@@ -525,8 +540,8 @@ router.get('/videos/:id', authenticateToken(['member', 'admin']), async (req, re
             tags: videoRecord.tags,
             categories: videoRecord.categories,
             visibility: videoRecord.visibility,
-            viewUrl: presignedUrl,
-            thumbnailUrl: videoRecord.thumbnailUrl
+            viewUrl: videoUrl,
+            thumbnailUrl: thumbnailUrl
         });
     } catch (err) {
         console.error('Error retrieving video details:', err);
@@ -588,6 +603,7 @@ router.put('/videos/:id', authenticateToken(['admin']), async (req, res) => {
 });
 
 // Update to the video delete endpoint to also delete the thumbnail
+// Updated video delete route for better thumbnail handling
 router.delete('/videos/:id', authenticateToken(['admin']), async (req, res) => {
     try {
         const videoId = req.params.id;
@@ -603,14 +619,10 @@ router.delete('/videos/:id', authenticateToken(['admin']), async (req, res) => {
         await s3Service.deleteFile(videoRecord.s3Key);
         
         // Delete the thumbnail from S3 if it exists
-        if (videoRecord.thumbnailUrl) {
+        if (videoRecord.thumbnailKey) {
             try {
-                // Extract thumbnail key from URL
-                const thumbnailUrl = new URL(videoRecord.thumbnailUrl);
-                const thumbnailKey = decodeURIComponent(thumbnailUrl.pathname.substring(1)); // Remove leading slash
-                
-                await s3Service.deleteFile(thumbnailKey);
-                console.log(`Deleted thumbnail: ${thumbnailKey}`);
+                await s3Service.deleteFile(videoRecord.thumbnailKey);
+                console.log(`Deleted thumbnail: ${videoRecord.thumbnailKey}`);
             } catch (err) {
                 console.error('Error deleting thumbnail:', err);
                 // Continue with video deletion even if thumbnail deletion fails

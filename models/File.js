@@ -52,7 +52,11 @@ const FileSchema = new Schema({
   },
   thumbnailUrl: {
     type: String, // URL to the generated thumbnail in S3
-  }
+  },
+  thumbnailKey: {
+    type: String,
+    default: null
+}
 });
 
 // Create a text index on fileName, author, tags, and categories
