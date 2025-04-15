@@ -1,16 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const s3Service = require('../scripts/accessS3'); // Your S3 service file
-const File = require('../models/File'); // The Mongoose File model
-const multer = require('multer'); // Import multer for file uploads
+const s3Service = require('../scripts/accessS3');
+const File = require('../models/File');
+const multer = require('multer');
 const authenticateToken = require('../middleware/authenticate')
-const { v4: uuidv4 } = require('uuid'); // Use UUID for unique key generation
+const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
-const User = require('../models/User'); // Ensure you have the User model imported
+const User = require('../models/User');
+const fs = require('fs').promises;
 
 // Set up multer to store files temporarily on the server
 const upload = multer({ dest: '../uploads/' }); // Files will be temporarily stored in 'uploads/' folder
+
+const videoUpload = multer({
+    dest: '../uploads/',
+    fileFilter: (req, file, cb) => {
+        // List of allowed video MIME types
+        const allowedVideoTypes = [
+            'video/mp4', 
+            'video/quicktime', 
+            'video/x-msvideo', 
+            'video/x-ms-wmv', 
+            'video/webm'
+        ];
+
+        if (allowedVideoTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid video file type. Only MP4, MOV, AVI, WMV, and WebM are allowed.'), false);
+        }
+    },
+    limits: {
+        fileSize: 1024 * 1024 * 500 // 500MB file size limit
+    }
+});
 
 // Route to upload a file to S3 and save metadata in MongoDB
 router.post('/upload', authenticateToken(['admin']), upload.single('file'), async (req, res) => {
@@ -269,6 +293,279 @@ router.get('/', async (req, res) => {
     } catch (err) {
         console.error('Error retrieving files:', err);
         res.status(500).json({ message: 'Error retrieving files', error: err.message });
+    }
+});
+
+// Route to upload a video to S3 and save metadata in MongoDB
+router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('video'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ message: 'No video uploaded' });
+        }
+
+        const { 
+            fileName = file.originalname, 
+            description = '', 
+            author = 'Unknown', 
+            tags = '', 
+            categories = '',
+            visibility = 'private'
+        } = req.body;
+
+        // Generate a unique key for S3 using UUID
+        const uniqueKey = `videos/${uuidv4()}-${file.originalname}`;
+
+        // Upload video to S3
+        const s3Data = await s3Service.uploadFile(file.path, uniqueKey);
+
+        // Clean up the temporary file
+        await fs.unlink(file.path);
+
+        // Save video metadata in MongoDB
+        const newVideo = new File({
+            fileName: fileName,
+            s3Key: s3Data.Key,
+            author: author,
+            s3Bucket: s3Data.Bucket,
+            fileSize: file.size,
+            fileType: file.mimetype,
+            description: description,
+            tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+            categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
+            visibility: visibility
+        });
+
+        await newVideo.save();
+
+        res.status(201).json({ 
+            message: 'Video uploaded successfully', 
+            video: {
+                id: newVideo._id,
+                fileName: newVideo.fileName,
+                author: newVideo.author,
+                description: newVideo.description
+            }
+        });
+    } catch (err) {
+        console.error('Error uploading video:', err);
+        res.status(500).json({ message: 'Error uploading video', error: err.message });
+    }
+});
+
+// Route to get list of videos with filtering and pagination
+router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) => {
+    try {
+        let filter = {};
+
+        // Filtering options for videos
+        if (req.query.fileName) filter.fileName = { $regex: req.query.fileName, $options: 'i' };
+        if (req.query.author) filter.author = { $regex: req.query.author, $options: 'i' };
+        if (req.query.tags) {
+            const tagList = req.query.tags.split(',').map(tag => new RegExp(tag.trim(), 'i'));
+            filter.tags = { $in: tagList };
+        }
+        if (req.query.categories) {
+            const categoryList = req.query.categories.split(',').map(category => new RegExp(category.trim(), 'i'));
+            filter.categories = { $in: categoryList };
+        }
+
+        // Pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Check user authorization
+        const token = req.header('Authorization')?.split(' ')[1];
+        if (token) {
+            try {
+                const user = jwt.verify(token, SECRET_KEY);
+                const foundUser = await User.findById(user.id);
+                if (!foundUser?.roles.includes('admin')) {
+                    // Non-admin users only see public videos
+                    filter.visibility = 'public';
+                }
+            } catch (err) {
+                // Invalid token - show only public videos
+                filter.visibility = 'public';
+            }
+        } else {
+            // No token - show only public videos
+            filter.visibility = 'public';
+        }
+
+        // Projection to exclude sensitive information
+        const projection = { 
+            s3Key: 0, 
+            s3Bucket: 0 
+        };
+
+        // Fetch videos with pagination
+        const videos = await File.find(filter)
+            .select(projection)
+            .skip(skip)
+            .limit(limit)
+            .sort({ uploadDate: -1 });
+
+        // Get total count for pagination
+        const totalVideos = await File.countDocuments(filter);
+
+        res.status(200).json({ 
+            videos, 
+            currentPage: page, 
+            totalPages: Math.ceil(totalVideos / limit),
+            totalVideos 
+        });
+    } catch (err) {
+        console.error('Error retrieving videos:', err);
+        res.status(500).json({ message: 'Error retrieving videos', error: err.message });
+    }
+});
+
+// Route to get video details
+router.get('/videos/:id', authenticateToken(['member', 'admin']), async (req, res) => {
+    try {
+        const videoId = req.params.id;
+
+        // Fetch the video metadata from MongoDB
+        const videoRecord = await File.findById(videoId);
+
+        if (!videoRecord) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        // Generate a pre-signed URL for viewing
+        const presignedUrl = await s3Service.getPresignedUrl(videoRecord.s3Key, 3600); // URL valid for 1 hour
+
+        // Check visibility and user authorization
+        const token = req.header('Authorization')?.split(' ')[1];
+        let isAuthorized = false;
+
+        if (token) {
+            try {
+                const user = jwt.verify(token, SECRET_KEY);
+                const foundUser = await User.findById(user.id);
+                
+                // Admin can always view
+                if (foundUser?.roles.includes('admin')) {
+                    isAuthorized = true;
+                } 
+                // Public or member can view public videos
+                else if (videoRecord.visibility === 'public') {
+                    isAuthorized = true;
+                }
+            } catch (err) {
+                // Invalid token - only allow public videos
+                isAuthorized = videoRecord.visibility === 'public';
+            }
+        } else {
+            // No token - only allow public videos
+            isAuthorized = videoRecord.visibility === 'public';
+        }
+
+        if (!isAuthorized) {
+            return res.status(403).json({ message: 'Unauthorized to view this video' });
+        }
+
+        res.status(200).json({
+            id: videoRecord._id,
+            fileName: videoRecord.fileName,
+            description: videoRecord.description,
+            author: videoRecord.author,
+            uploadDate: videoRecord.uploadDate,
+            createdDate: videoRecord.createdDate,
+            updatedDate: videoRecord.updatedDate,
+            fileType: videoRecord.fileType,
+            fileSize: videoRecord.fileSize,
+            tags: videoRecord.tags,
+            categories: videoRecord.categories,
+            visibility: videoRecord.visibility,
+            viewUrl: presignedUrl
+        });
+    } catch (err) {
+        console.error('Error retrieving video details:', err);
+        res.status(500).json({ message: 'Error retrieving video details', error: err.message });
+    }
+});
+
+// Route to update video details
+router.put('/videos/:id', authenticateToken(['admin']), async (req, res) => {
+    try {
+        const videoId = req.params.id;
+
+        // Find the video by ID
+        const videoRecord = await File.findById(videoId);
+
+        if (!videoRecord) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        // Fields that can be updated
+        const updateFields = [
+            'fileName', 
+            'description', 
+            'author', 
+            'tags', 
+            'categories', 
+            'visibility'
+        ];
+
+        // Update fields from request body
+        updateFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                // Special handling for tags and categories
+                if (field === 'tags' || field === 'categories') {
+                    videoRecord[field] = typeof req.body[field] === 'string' 
+                        ? req.body[field].split(',').map(item => item.trim())
+                        : req.body[field];
+                } else {
+                    videoRecord[field] = req.body[field];
+                }
+            }
+        });
+
+        // Save the updated record
+        await videoRecord.save();
+
+        res.status(200).json({ 
+            message: 'Video details updated successfully', 
+            video: {
+                id: videoRecord._id,
+                fileName: videoRecord.fileName,
+                description: videoRecord.description
+            }
+        });
+    } catch (err) {
+        console.error('Error updating video details:', err);
+        res.status(500).json({ message: 'Error updating video details', error: err.message });
+    }
+});
+
+// Route to delete a video
+router.delete('/videos/:id', authenticateToken(['admin']), async (req, res) => {
+    try {
+        const videoId = req.params.id;
+
+        // Fetch the video metadata from MongoDB
+        const videoRecord = await File.findById(videoId);
+
+        if (!videoRecord) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        // Delete the video from S3
+        await s3Service.deleteFile(videoRecord.s3Key);
+
+        // Delete the video metadata from MongoDB
+        await File.findByIdAndDelete(videoId);
+
+        res.status(200).json({ 
+            message: 'Video deleted successfully', 
+            videoId: videoId 
+        });
+    } catch (err) {
+        console.error('Error deleting video:', err);
+        res.status(500).json({ message: 'Error deleting video', error: err.message });
     }
 });
 
