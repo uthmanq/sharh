@@ -6,6 +6,9 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const path = require('path');
 const tmp = require('tmp-promise');
+const ENVIRONMENT = process.env.ENVIRONMENT || 'development';
+const DBNAME = process.env.DBNAME;
+const DBADDRESS = process.env.DBADDRESS;
 
 // MongoDB connection
 mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
