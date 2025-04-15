@@ -9,6 +9,9 @@ const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
 const User = require('../models/User');
 const fs = require('fs').promises;
+const { spawn } = require('child_process');
+const path = require('path');
+const tmp = require('tmp-promise');
 
 // Set up multer to store files temporarily on the server
 const upload = multer({ dest: '../uploads/' }); // Files will be temporarily stored in 'uploads/' folder
@@ -35,6 +38,32 @@ const videoUpload = multer({
         fileSize: 1024 * 1024 * 500 // 500MB file size limit
     }
 });
+
+async function generateVideoThumbnail(videoPath, outputPath) {
+    return new Promise((resolve, reject) => {
+      // Use ffmpeg to extract a frame at 2 seconds (or adjust as needed)
+      const ffmpeg = spawn('ffmpeg', [
+        '-i', videoPath,
+        '-ss', '00:00:02.000',  // Take frame at 2 seconds
+        '-vframes', '1',        // Extract 1 frame
+        '-vf', 'scale=320:180', // Resize to 320x180
+        '-f', 'image2',         // Output format
+        outputPath              // Output path
+      ]);
+  
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          resolve(outputPath);
+        } else {
+          reject(new Error(`FFmpeg process exited with code ${code}`));
+        }
+      });
+  
+      ffmpeg.stderr.on('data', (data) => {
+        console.log(`FFmpeg: ${data}`);
+      });
+    });
+  }
 
 // Route to upload a file to S3 and save metadata in MongoDB
 router.post('/upload', authenticateToken(['admin']), upload.single('file'), async (req, res) => {
@@ -314,13 +343,27 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
         } = req.body;
 
         // Generate a unique key for S3 using UUID
-        const uniqueKey = `videos/${uuidv4()}-${file.originalname}`;
+        const videoKey = `videos/${uuidv4()}-${file.originalname}`;
 
         // Upload video to S3
-        const s3Data = await s3Service.uploadFile(file.path, uniqueKey);
-
-        // Clean up the temporary file
+        const s3Data = await s3Service.uploadFile(file.path, videoKey);
+        
+        // Create a temporary file for the thumbnail
+        const tmpFile = await tmp.file({ postfix: '.jpg' });
+        
+        // Generate thumbnail
+        await generateVideoThumbnail(file.path, tmpFile.path);
+        
+        // Upload thumbnail to S3
+        const thumbnailKey = `thumbnails/${uuidv4()}-${path.basename(file.originalname, path.extname(file.originalname))}.jpg`;
+        const thumbnailData = await s3Service.uploadFile(tmpFile.path, thumbnailKey);
+        
+        // Generate a pre-signed URL for the thumbnail or use a CloudFront distribution if available
+        const thumbnailUrl = await s3Service.getPresignedUrl(thumbnailKey, 31536000); // 1 year expiry
+        
+        // Clean up temporary files
         await fs.unlink(file.path);
+        await tmpFile.cleanup();
 
         // Save video metadata in MongoDB
         const newVideo = new File({
@@ -333,7 +376,8 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
             description: description,
             tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
             categories: categories ? categories.split(',').map(cat => cat.trim()) : [],
-            visibility: visibility
+            visibility: visibility,
+            thumbnailUrl: thumbnailUrl
         });
 
         await newVideo.save();
@@ -344,7 +388,8 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
                 id: newVideo._id,
                 fileName: newVideo.fileName,
                 author: newVideo.author,
-                description: newVideo.description
+                description: newVideo.description,
+                thumbnailUrl: newVideo.thumbnailUrl
             }
         });
     } catch (err) {
@@ -480,7 +525,8 @@ router.get('/videos/:id', authenticateToken(['member', 'admin']), async (req, re
             tags: videoRecord.tags,
             categories: videoRecord.categories,
             visibility: videoRecord.visibility,
-            viewUrl: presignedUrl
+            viewUrl: presignedUrl,
+            thumbnailUrl: videoRecord.thumbnailUrl
         });
     } catch (err) {
         console.error('Error retrieving video details:', err);
@@ -541,7 +587,7 @@ router.put('/videos/:id', authenticateToken(['admin']), async (req, res) => {
     }
 });
 
-// Route to delete a video
+// Update to the video delete endpoint to also delete the thumbnail
 router.delete('/videos/:id', authenticateToken(['admin']), async (req, res) => {
     try {
         const videoId = req.params.id;
@@ -555,6 +601,21 @@ router.delete('/videos/:id', authenticateToken(['admin']), async (req, res) => {
 
         // Delete the video from S3
         await s3Service.deleteFile(videoRecord.s3Key);
+        
+        // Delete the thumbnail from S3 if it exists
+        if (videoRecord.thumbnailUrl) {
+            try {
+                // Extract thumbnail key from URL
+                const thumbnailUrl = new URL(videoRecord.thumbnailUrl);
+                const thumbnailKey = decodeURIComponent(thumbnailUrl.pathname.substring(1)); // Remove leading slash
+                
+                await s3Service.deleteFile(thumbnailKey);
+                console.log(`Deleted thumbnail: ${thumbnailKey}`);
+            } catch (err) {
+                console.error('Error deleting thumbnail:', err);
+                // Continue with video deletion even if thumbnail deletion fails
+            }
+        }
 
         // Delete the video metadata from MongoDB
         await File.findByIdAndDelete(videoId);

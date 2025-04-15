@@ -49,6 +49,9 @@ const FileSchema = new Schema({
   },
   updatedDate: {
     type: Date // Date when the file document was last updated
+  },
+  thumbnailUrl: {
+    type: String, // URL to the generated thumbnail in S3
   }
 });
 
