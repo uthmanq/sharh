@@ -409,7 +409,7 @@ router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('
 });
 // Route to get list of videos with filtering and pagination
 // Route to get list of videos with filtering and pagination
-router.get('/videos', authenticateToken(['member', 'admin']), async (req, res) => {
+router.get('/videos', async (req, res) => {
     try {
         let filter = {};
 
