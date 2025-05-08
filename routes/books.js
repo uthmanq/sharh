@@ -439,6 +439,7 @@ router.get('/:bookId', async (req, res) => {
             title: book.title,
             author: book.author,
             visibility: book.visibility,
+            description: book.description,
             metadata: book.metadata || {},
             lines: book.lines.map(line => ({
                 id: line._id,
