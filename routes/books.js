@@ -287,7 +287,7 @@ router.get('/', async (req, res) => {
 router.get('/adminbooks', authenticateToken(['admin']), async (req, res) => {
     try {
         // Build query based on filter parameters
-        const query = { visibility: 'public' };
+        const query = { };
         
         // Filter by title if provided
         if (req.query.title) {
