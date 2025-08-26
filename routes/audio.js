@@ -30,6 +30,74 @@ router.get('/fields', (req, res) => {
   res.json({ fields: AVAILABLE_FIELDS });
 });
 
+
+// Generate audio for multiple fields of a line
+router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
+    console.log("here")
+  try {
+    const { bookId, lineId } = req.params;
+    const { fields = ['arabic', 'english'], voice = 'alloy' } = req.body;
+
+    // Validate fields
+    console.log("request", req.body)
+    const invalidFields = fields.filter(f => !AVAILABLE_FIELDS.includes(f.toLowerCase()));
+    console.error(invalidFields);
+    if (invalidFields.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid fields',
+        invalidFields,
+        availableFields: AVAILABLE_FIELDS
+      });
+    }
+
+    // Get the book and line
+    const book = await Book.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
+    const line = book.lines.id(lineId);
+    if (!line) {
+      return res.status(404).json({ error: 'Line not found' });
+    }
+
+    // Generate audio for each field
+    const results = {};
+    const errors = {};
+
+    for (const field of fields) {
+      try {
+        const result = await audioService.getOrCreateAudio(bookId, lineId, line, field, voice);
+        results[field] = {
+          s3Key: result.s3Key,
+          audioUrl: result.url,
+          cached: result.cached
+        };
+      } catch (error) {
+        console.error(`Error generating audio for field ${field}:`, error);
+        errors[field] = error.message;
+      }
+    }
+
+    res.json({
+      success: true,
+      bookId,
+      lineId,
+      voice,
+      results,
+      errors: Object.keys(errors).length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('Error in batch audio generation:', error);
+    res.status(500).json({
+      error: 'Failed to generate batch audio',
+      details: error.message
+    });
+  }
+});
+
+
 // Generate or get audio for a specific line field
 router.post('/:bookId/lines/:lineId/:field', async (req, res) => {
   try {
@@ -220,72 +288,6 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
     console.error('Error listing line audio:', error);
     res.status(500).json({
       error: 'Failed to list audio files',
-      details: error.message
-    });
-  }
-});
-
-// Generate audio for multiple fields of a line
-router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
-    console.log("here")
-  try {
-    const { bookId, lineId } = req.params;
-    const { fields = ['arabic', 'english'], voice = 'alloy' } = req.body;
-
-    // Validate fields
-    console.log("request", req.body)
-    const invalidFields = fields.filter(f => !AVAILABLE_FIELDS.includes(f.toLowerCase()));
-    console.error(invalidFields);
-    if (invalidFields.length > 0) {
-      return res.status(400).json({
-        error: 'Invalid fields',
-        invalidFields,
-        availableFields: AVAILABLE_FIELDS
-      });
-    }
-
-    // Get the book and line
-    const book = await Book.findById(bookId);
-    if (!book) {
-      return res.status(404).json({ error: 'Book not found' });
-    }
-
-    const line = book.lines.id(lineId);
-    if (!line) {
-      return res.status(404).json({ error: 'Line not found' });
-    }
-
-    // Generate audio for each field
-    const results = {};
-    const errors = {};
-
-    for (const field of fields) {
-      try {
-        const result = await audioService.getOrCreateAudio(bookId, lineId, line, field, voice);
-        results[field] = {
-          s3Key: result.s3Key,
-          audioUrl: result.url,
-          cached: result.cached
-        };
-      } catch (error) {
-        console.error(`Error generating audio for field ${field}:`, error);
-        errors[field] = error.message;
-      }
-    }
-
-    res.json({
-      success: true,
-      bookId,
-      lineId,
-      voice,
-      results,
-      errors: Object.keys(errors).length > 0 ? errors : undefined
-    });
-
-  } catch (error) {
-    console.error('Error in batch audio generation:', error);
-    res.status(500).json({
-      error: 'Failed to generate batch audio',
       details: error.message
     });
   }
