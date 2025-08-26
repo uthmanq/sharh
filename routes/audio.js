@@ -232,7 +232,7 @@ router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
     const { fields = ['arabic', 'english'], voice = 'alloy' } = req.body;
 
     // Validate fields
-    console.log(req.body)
+    console.log("request", req.body)
     const invalidFields = fields.filter(f => !AVAILABLE_FIELDS.includes(f.toLowerCase()));
     if (invalidFields.length > 0) {
       return res.status(400).json({
