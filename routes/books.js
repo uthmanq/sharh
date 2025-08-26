@@ -204,7 +204,153 @@ router.get('/', async (req, res) => {
                 translator: book.translator,
                 progress: book.progress,
                 category: book.category,
-                description: book.description
+                description: book.description,
+            };
+        });
+        
+        res.json({ books: formattedBooks });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Internal Server Error (1)');
+    }
+});
+
+router.get('/', async (req, res) => {
+    try {
+        // Build query based on filter parameters
+        const query = { visibility: 'public' };
+        
+        // Filter by title if provided
+        if (req.query.title) {
+            query.title = { $regex: req.query.title, $options: 'i' }; // Case-insensitive partial match
+        }
+        
+        // Filter by category if provided
+        if (req.query.category) {
+            query.category = { $regex: req.query.category, $options: 'i' };
+        }
+        
+        // Filter by author if provided
+        if (req.query.author) {
+            query.author = { $regex: req.query.author, $options: 'i' };
+        }
+        
+        // Determine sort options
+        let sortOption = { lastUpdated: -1 }; // Default sort
+        
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case 'title_asc':
+                    sortOption = { title: 1 };
+                    break;
+                case 'title_desc':
+                    sortOption = { title: -1 };
+                    break;
+                case 'date_asc':
+                    sortOption = { lastUpdated: 1 };
+                    break;
+                case 'date_desc':
+                    sortOption = { lastUpdated: -1 };
+                    break;
+                default:
+                    sortOption = { lastUpdated: -1 }; // Default sort
+            }
+        }
+        
+        // Log the final query for debugging
+        console.log('Query:', JSON.stringify(query));
+        console.log('Sort:', JSON.stringify(sortOption));
+        
+        const books = await Book.find(query).sort(sortOption);
+        
+        const formattedBooks = books.map(book => {
+            return {
+                id: book._id,
+                title: book.title,
+                author: book.author,
+                metadata: book.metadata || {},
+                lastUpdated: book.lastUpdated,
+                translator: book.translator,
+                progress: book.progress,
+                category: book.category,
+                description: book.description,
+            };
+        });
+        
+        res.json({ books: formattedBooks });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Internal Server Error (1)');
+    }
+});
+
+router.get('/adminbooks', authenticateToken(['admin']), async (req, res) => {
+    try {
+        // Build query based on filter parameters
+        const query = { };
+        
+        // Filter by title if provided
+        if (req.query.title) {
+            query.title = { $regex: req.query.title, $options: 'i' }; // Case-insensitive partial match
+        }
+        
+        // Filter by category if provided
+        if (req.query.category) {
+            query.category = { $regex: req.query.category, $options: 'i' };
+        }
+        
+        // Filter by author if provided
+        if (req.query.author) {
+            query.author = { $regex: req.query.author, $options: 'i' };
+        }
+        
+        // Determine sort options
+        let sortOption = { lastUpdated: -1 }; // Default sort
+        
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case 'title_asc':
+                    sortOption = { title: 1 };
+                    break;
+                case 'title_desc':
+                    sortOption = { title: -1 };
+                    break;
+                case 'date_asc':
+                    sortOption = { lastUpdated: 1 };
+                    break;
+                case 'date_desc':
+                    sortOption = { lastUpdated: -1 };
+                    break;
+                default:
+                    sortOption = { lastUpdated: -1 }; // Default sort
+            }
+        }
+        
+        // Log the final query for debugging
+        console.log('Query:', JSON.stringify(query));
+        console.log('Sort:', JSON.stringify(sortOption));
+        
+        // Populate the owner field to get user information
+        const books = await Book.find(query)
+            .populate('owner', 'username email') // Only select username and email from owner
+            .sort(sortOption);
+        
+        const formattedBooks = books.map(book => {
+            return {
+                id: book._id,
+                title: book.title,
+                author: book.author,
+                metadata: book.metadata || {},
+                lastUpdated: book.lastUpdated,
+                translator: book.translator,
+                progress: book.progress,
+                category: book.category,
+                description: book.description,
+                owner: {
+                    id: book.owner._id,
+                    username: book.owner.username,
+                    email: book.owner.email
+                }
             };
         });
         
@@ -439,6 +585,7 @@ router.get('/:bookId', async (req, res) => {
             title: book.title,
             author: book.author,
             visibility: book.visibility,
+            description: book.description,
             metadata: book.metadata || {},
             lines: book.lines.map(line => ({
                 id: line._id,
