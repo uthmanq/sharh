@@ -33,11 +33,11 @@ router.get('/fields', (req, res) => {
 // Generate or get audio for a specific line field
 router.post('/:bookId/lines/:lineId/:field', async (req, res) => {
   try {
-    const { bookId, lineId, field } = req.params;
+    const { bookId, lineId, fields } = req.params;
     const { voice = 'alloy' } = req.body;
 
     // Validate field
-    if (!AVAILABLE_FIELDS.includes(field.toLowerCase())) {
+    if (!AVAILABLE_FIELDS.includes(fields.toLowerCase())) {
       return res.status(400).json({
         error: 'Invalid field',
         availableFields: AVAILABLE_FIELDS
@@ -64,13 +64,13 @@ router.post('/:bookId/lines/:lineId/:field', async (req, res) => {
     }
 
     // Generate or get audio
-    const result = await audioService.getOrCreateAudio(bookId, lineId, line, field, voice);
+    const result = await audioService.getOrCreateAudio(bookId, lineId, line, fields, voice);
 
     res.json({
       success: true,
       bookId,
       lineId,
-      field,
+      fields,
       voice,
       s3Key: result.s3Key,
       audioUrl: result.url,
