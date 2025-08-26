@@ -399,4 +399,142 @@ router.delete('/:bookId', authenticateToken(['admin']), async (req, res) => {
   }
 });
 
+// Add this route to routes/audio.js
+
+// Get all audio files for a book with field filtering
+router.get('/:bookId/all', async (req, res) => {
+    try {
+      const { bookId } = req.params;
+      const { fields } = req.query; // comma-separated list: 'arabic', 'english', 'commentary'
+  
+      // Verify book exists
+      const book = await Book.findById(bookId);
+      if (!book) {
+        return res.status(404).json({ error: 'Book not found' });
+      }
+  
+      // Parse and validate requested fields
+      let requestedFields = AVAILABLE_FIELDS; // Default to all fields
+      if (fields) {
+        requestedFields = fields.split(',').map(f => f.trim().toLowerCase());
+        const invalidFields = requestedFields.filter(f => !AVAILABLE_FIELDS.includes(f));
+        if (invalidFields.length > 0) {
+          return res.status(400).json({
+            error: 'Invalid fields',
+            invalidFields,
+            availableFields: AVAILABLE_FIELDS
+          });
+        }
+      }
+  
+      // Get all audio files for the book
+      const bookPrefix = `${bookId}/`;
+      const listParams = {
+        Bucket: audioService.bucketName,
+        Prefix: bookPrefix,
+      };
+  
+      let allAudioFiles = [];
+      let continuationToken = null;
+  
+      // Get all objects from S3 (handling pagination)
+      do {
+        if (continuationToken) {
+          listParams.ContinuationToken = continuationToken;
+        }
+  
+        const s3 = new (require('aws-sdk')).S3({
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          region: process.env.AWS_REGION,
+        });
+  
+        const objects = await s3.listObjectsV2(listParams).promise();
+        
+        if (objects.Contents) {
+          allAudioFiles = allAudioFiles.concat(objects.Contents);
+        }
+  
+        continuationToken = objects.NextContinuationToken;
+      } while (continuationToken);
+  
+      // Parse and filter audio files by requested fields
+      const parsedFiles = allAudioFiles
+        .map(obj => {
+          const parsed = audioService.parseS3Key(obj.Key);
+          if (!parsed) return null;
+  
+          return {
+            s3Key: obj.Key,
+            lineId: parsed.lineId,
+            field: parsed.field,
+            voice: parsed.voice,
+            size: obj.Size,
+            lastModified: obj.LastModified
+          };
+        })
+        .filter(file => file !== null)
+        .filter(file => requestedFields.includes(file.field.toLowerCase()));
+  
+      // Group audio files by line and field
+      const audioByLine = {};
+      for (const file of parsedFiles) {
+        if (!audioByLine[file.lineId]) {
+          audioByLine[file.lineId] = {};
+        }
+        if (!audioByLine[file.lineId][file.field]) {
+          audioByLine[file.lineId][file.field] = [];
+        }
+        audioByLine[file.lineId][file.field].push({
+          s3Key: file.s3Key,
+          voice: file.voice,
+          size: file.size,
+          lastModified: file.lastModified,
+          url: await audioService.getPresignedUrl(file.s3Key, 7200) // 2-hour expiration
+        });
+      }
+  
+      // Build response with line data
+      const response = {
+        success: true,
+        bookId,
+        bookTitle: book.title,
+        requestedFields,
+        totalFiles: parsedFiles.length,
+        lines: []
+      };
+  
+      // Include line content and audio data, sorted by line order
+      const sortedLines = book.lines
+        .filter(line => audioByLine[line._id.toString()])
+        .sort((a, b) => (a.lineNumber || 0) - (b.lineNumber || 0));
+  
+      for (const line of sortedLines) {
+        const lineId = line._id.toString();
+        const audioData = audioByLine[lineId];
+  
+        response.lines.push({
+          lineId,
+          lineNumber: line.lineNumber,
+          content: {
+            arabic: line.Arabic || '',
+            english: line.English || '',
+            commentary: line.commentary || '',
+            rootwords: line.rootwords || ''
+          },
+          audio: audioData
+        });
+      }
+  
+      res.json(response);
+  
+    } catch (error) {
+      console.error('Error getting book audio list:', error);
+      res.status(500).json({
+        error: 'Failed to get book audio list',
+        details: error.message
+      });
+    }
+  });
+  
 module.exports = router;
