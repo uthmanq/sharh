@@ -52,6 +52,8 @@ const stripeRoutes = require('./routes/stripe');
 const fileRoutes = require('./routes/files');
 const bookmarkRoutes = require('./routes/bookmarks');
 const feedbackRoutes = require('./routes/feedbacks');
+const audioRoutes = require('./routes/audio');
+
 // Use Routes
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);
@@ -59,6 +61,7 @@ app.use('/stripe', stripeRoutes);
 app.use('/files', fileRoutes);
 app.use('/bookmarks', bookmarkRoutes);
 app.use('/feedback', feedbackRoutes);
+app.use('/audio', audioRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = (recipients, subject, htmlContent, successCallback, errorCallback) => {
   const mailOptions = {
-    from: `"Uthman from Sharh App" <${process.env.GMAIL_USER}>`,  // Sender address
+    from: `"Uthman From Sharh" <${process.env.GMAIL_USER}>`,  // Sender address
     bcc: recipients.join(','),                      // BCC recipients to hide their emails from each other
     subject: subject,                               // Email subject
     html: htmlContent                               // Email HTML content
