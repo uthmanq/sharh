@@ -227,6 +227,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 
 // Generate audio for multiple fields of a line
 router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
+    console.log("here")
   try {
     const { bookId, lineId } = req.params;
     const { fields = ['arabic', 'english'], voice = 'alloy' } = req.body;
