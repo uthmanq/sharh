@@ -201,7 +201,8 @@ async deleteFile(s3Key) {
           model: "tts-1",
           voice: voice,
           input: chunks[i],
-          response_format: 'mp3'
+          response_format: 'mp3',
+          instructions: "Pronounce Arabic that is transliterated into English with authentic Arabic pronounciation. Whenever you see Prophet Muhammad, or the ﷺ symbol, say peace and blessings be upon him."
         });
 
         const buffer = Buffer.from(await mp3.arrayBuffer());
