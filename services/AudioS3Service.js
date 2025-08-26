@@ -48,6 +48,25 @@ class AudioS3Service {
   }
 
   /**
+ * Delete a specific audio file from S3
+ */
+async deleteFile(s3Key) {
+    try {
+      const params = {
+        Bucket: this.bucketName,
+        Key: s3Key,
+      };
+  
+      await s3.deleteObject(params).promise();
+      console.log(`Successfully deleted audio file: ${s3Key}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting audio file ${s3Key}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Parse S3 key to extract metadata
    */
   parseS3Key(s3Key) {
