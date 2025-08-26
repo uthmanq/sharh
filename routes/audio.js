@@ -33,11 +33,11 @@ router.get('/fields', (req, res) => {
 // Generate or get audio for a specific line field
 router.post('/:bookId/lines/:lineId/:field', async (req, res) => {
   try {
-    const { bookId, lineId, fields } = req.params;
+    const { bookId, lineId, field } = req.params;
     const { voice = 'alloy' } = req.body;
 
     // Validate field
-    if (!AVAILABLE_FIELDS.includes(fields.toLowerCase())) {
+    if (!AVAILABLE_FIELDS.includes(field.toLowerCase())) {
       return res.status(400).json({
         error: 'Invalid field',
         availableFields: AVAILABLE_FIELDS
@@ -64,13 +64,13 @@ router.post('/:bookId/lines/:lineId/:field', async (req, res) => {
     }
 
     // Generate or get audio
-    const result = await audioService.getOrCreateAudio(bookId, lineId, line, fields, voice);
+    const result = await audioService.getOrCreateAudio(bookId, lineId, line, field, voice);
 
     res.json({
       success: true,
       bookId,
       lineId,
-      fields,
+      field,
       voice,
       s3Key: result.s3Key,
       audioUrl: result.url,
@@ -232,6 +232,7 @@ router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
     const { fields = ['arabic', 'english'], voice = 'alloy' } = req.body;
 
     // Validate fields
+    console.log(req.body)
     const invalidFields = fields.filter(f => !AVAILABLE_FIELDS.includes(f.toLowerCase()));
     if (invalidFields.length > 0) {
       return res.status(400).json({
