@@ -234,6 +234,7 @@ router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
     // Validate fields
     console.log("request", req.body)
     const invalidFields = fields.filter(f => !AVAILABLE_FIELDS.includes(f.toLowerCase()));
+    console.error(invalidFields);
     if (invalidFields.length > 0) {
       return res.status(400).json({
         error: 'Invalid fields',
