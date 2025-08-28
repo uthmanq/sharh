@@ -6,14 +6,15 @@ const readline = require('readline');
 require('dotenv').config({ path: '../.env' });
 
 // Configuration
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:80';
+const API_BASE_URL = process.env.API_BASE_URL || 'https://app.ummahspot.com';
 const DBNAME = process.env.DBNAME;
 const DBADDRESS = process.env.DBADDRESS;
 const RATE_LIMIT_REQUESTS = 5;
 const COOLDOWN_SECONDS = 10;
 
+// Book model (matching your actual schema
 
-const Book = require('../models/Book')
+const Book = require('../models/Book');
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -133,7 +134,13 @@ async function generateLineAudio(bookId, lineId, voice = 'alloy') {
     const response = await axios.post(
       `${API_BASE_URL}/audio/${bookId}/lines/${lineId}/batch`,
       { fields, voice },
-      { timeout: 60000 } // 60 second timeout
+      { 
+        timeout: 60000, // 60 second timeout
+        // Add options to handle certificate issues if needed
+        httpsAgent: process.env.NODE_ENV === 'development' ? 
+          new (require('https')).Agent({ rejectUnauthorized: false }) : 
+          undefined
+      }
     );
     
     return response.data;
@@ -142,6 +149,8 @@ async function generateLineAudio(bookId, lineId, voice = 'alloy') {
       throw new Error(`API Error ${error.response.status}: ${error.response.data?.error || error.message}`);
     } else if (error.code === 'ECONNABORTED') {
       throw new Error('Request timeout - audio generation took too long');
+    } else if (error.code === 'CERT_HAS_EXPIRED' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
+      throw new Error(`Certificate error: ${error.message}. Try setting NODE_ENV=development to bypass SSL verification.`);
     } else {
       throw new Error(`Network error: ${error.message}`);
     }
