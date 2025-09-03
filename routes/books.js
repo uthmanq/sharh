@@ -680,6 +680,50 @@ router.post('/:bookId/lines', authenticateToken(['member', 'editor', 'admin']), 
     }
 });
 
+// POST /:bookId/lines/bulk
+router.post('/:bookId/lines/bulk', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook: true }), async (req, res) => {
+    const { newLines, position } = req.body;
+    if (!Array.isArray(newLines) || newLines.length === 0) {
+      return res.status(400).send('Bad Request: newLines must be a non-empty array');
+    }
+  
+    try {
+      const book = await Book.findById(req.params.bookId);
+      if (!book) return res.status(404).send('Book not found');
+  
+      // validate and filter duplicates
+      for (const line of newLines) {
+        if (!line.Arabic || !line.English) {
+          return res.status(400).send('Each line must have Arabic and English');
+        }
+        if (book.lines.find(l => l.Arabic === line.Arabic)) {
+          return res.status(400).send(`Duplicate Arabic line: ${line.Arabic}`);
+        }
+      }
+  
+      if (position != null && position >= 0 && position <= book.lines.length) {
+        book.lines.splice(position, 0, ...newLines);
+      } else {
+        book.lines.push(...newLines);
+      }
+  
+      const updatedBook = await book.save();
+      const formattedLines = updatedBook.lines.slice(-newLines.length).map(l => ({
+        id: l._id,
+        Arabic: l.Arabic,
+        English: l.English,
+        commentary: l.commentary || "",
+        rootwords: l.rootwords || ""
+      }));
+  
+      res.status(201).json(formattedLines);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+  
+
 // GET /:bookId/lines/:lineId
 router.get('/:bookId/lines/:lineId', async (req, res) => {
     try {
