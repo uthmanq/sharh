@@ -7,7 +7,9 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     stripeCustomerId: { type: String, required: true },
     roles: { type: [String], default: ['member'] },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date }
 });
 
 // Pre-save hook to hash the password before saving

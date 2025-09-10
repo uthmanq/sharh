@@ -48,7 +48,11 @@ const bookSchema = new mongoose.Schema({
         type: String,
         enum: ['In Progress', 'Near Complete', 'Complete'],
         default: 'In Progress',
-      }
+      },
+      prerequisites: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Book'
+    }]
 });
 
 // Middleware to update 'lastUpdated' before each save

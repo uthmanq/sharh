@@ -121,6 +121,124 @@ router.get('/', authenticateToken(), async (req, res) => {
     }
 });
 
+
+/**
+ * @swagger
+ * /user/forgot-password:
+ *   post:
+ *     summary: Send password reset email
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address of the user
+ *     responses:
+ *       200:
+ *         description: Password reset email sent (always returns success for security)
+ *       400:
+ *         description: Bad request - invalid email format
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validate email
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({
+                error: 'Valid email address is required'
+            });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase() });
+
+        // Always return success for security (don't reveal if email exists)
+        if (!user) {
+            return res.status(200).json({
+                message: 'If an account with that email exists, a password reset link has been sent'
+            });
+        }
+
+        // Generate reset token (expires in 1 hour)
+        const resetToken = jwt.sign(
+            {
+                id: user._id,
+                email: user.email,
+                type: 'password-reset'
+            },
+            SECRET_KEY,
+            { expiresIn: '1h' }
+        );
+
+        // Store reset token in user document (optional - for additional security)
+        user.passwordResetToken = resetToken;
+        user.passwordResetExpires = new Date(Date.now() + 3600000); // 1 hour
+        await user.save();
+
+        // Create reset URL (adjust domain as needed)
+        const resetUrl = `https://sharhapp.com/reset-password?token=${resetToken}`;
+
+        // Send password reset email
+        const recipients = [user.email];
+        const subject = 'Password Reset Request - Sharh';
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">Password Reset Request</h2>
+                <p>Dear ${user.firstName || user.username},</p>
+                <p>You have requested to reset your password for your Sharh account.</p>
+                <p>Please click the link below to reset your password:</p>
+                <p style="margin: 20px 0;">
+                    <a href="${resetUrl}" 
+                       style="background-color: #007bff; color: white; padding: 12px 24px; 
+                              text-decoration: none; border-radius: 4px; display: inline-block;">
+                        Reset Password
+                    </a>
+                </p>
+                <p><strong>This link will expire in 1 hour.</strong></p>
+                <p>If you did not request this password reset, please ignore this email and your password will remain unchanged.</p>
+                <p>For security reasons, please do not share this link with anyone.</p>
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 12px;">
+                    If the button above doesn't work, copy and paste this link into your browser:<br>
+                    <a href="${resetUrl}">${resetUrl}</a>
+                </p>
+            </div>
+        `;
+
+        // Send email without affecting the response
+        sendEmail(
+            recipients,
+            subject,
+            html,
+            (info) => {
+                console.log('Password reset email sent successfully', info.messageId);
+            },
+            (error) => {
+                console.error('Failed to send password reset email', error.message);
+            }
+        );
+
+        res.status(200).json({
+            message: 'If an account with that email exists, a password reset link has been sent'
+        });
+
+    } catch (error) {
+        console.error('Error in forgot password:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
 // ADMIN ROUTES
 
 // Update user details (Admin Only)
