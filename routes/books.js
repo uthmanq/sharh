@@ -206,6 +206,7 @@ router.get('/', async (req, res) => {
                 progress: book.progress,
                 category: book.category,
                 description: book.description,
+                difficulty: book.difficulty
             };
         });
         
