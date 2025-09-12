@@ -165,6 +165,7 @@ router.get('/', async (req, res) => {
         if (req.query.author) {
             query.author = { $regex: req.query.author, $options: 'i' };
         }
+
         
         // Determine sort options
         let sortOption = { lastUpdated: -1 }; // Default sort
@@ -274,6 +275,7 @@ router.get('/', async (req, res) => {
                 progress: book.progress,
                 category: book.category,
                 description: book.description,
+                difficulty: book.difficulty
             };
         });
         
@@ -513,7 +515,8 @@ router.post('/', authenticateToken(['member','editor', 'admin']), async (req, re
             category: req.category,
             translator: req.translator,
             progress: req.progress,
-            category: req.category
+            category: req.category,
+            difficulty: req.difficulty,
         };
         res.status(201).json(formattedBook);
     } catch (err) {
@@ -587,6 +590,7 @@ router.get('/:bookId', async (req, res) => {
             visibility: book.visibility,
             description: book.description,
             metadata: book.metadata || {},
+            difficulty: book.difficulty,
             lines: book.lines.map(line => ({
                 id: line._id,
                 Arabic: line.Arabic,
@@ -831,7 +835,7 @@ router.put('/:bookId/lines/:index/move', authenticateToken(['member','editor', '
 
 // PUT /:bookId (Edit Metadata and Book Title)
 router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
-    const { title, author, metadata, visibility, category, translator, progress, description } = req.body;
+    const { title, author, metadata, visibility, category, translator, progress, description, difficulty } = req.body;
     // Optional: Add validation logic here for title, author, and metadata if needed
 
     try {
@@ -848,6 +852,7 @@ router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGua
         if (translator) book.translator = translator;
         if (progress) book.progress = progress;
         if (description) book.description = description;
+        if (difficulty) book.difficulty = difficulty;
 
         if(req.user.roles.includes('admin')){
         if (visibility) book.visibility = visibility;
@@ -859,6 +864,7 @@ router.put('/:bookId', authenticateToken(['member', 'editor', 'admin']), EditGua
             author: updatedBook.author,
             visibility: updatedBook.visibility,
             description: updatedBook.description,
+            difficulty: updatedBook.difficulty,
             metadata: updatedBook.metadata || {},
             lines: updatedBook.lines.map(line => {
                 return {

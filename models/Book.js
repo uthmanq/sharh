@@ -49,6 +49,11 @@ const bookSchema = new mongoose.Schema({
         enum: ['In Progress', 'Near Complete', 'Complete'],
         default: 'In Progress',
       },
+    difficulty: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner',
+      },
       prerequisites: [{
         type: Schema.Types.ObjectId,
         ref: 'Book'
