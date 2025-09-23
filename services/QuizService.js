@@ -72,5 +72,6 @@ const generateQuizFromBookObject = async (bookContent, bookId, bookTitle) => {
     throw new Error('Failed to generate quiz.');
   }
 };
-
-export { generateQuizFromBookObject };
+module.exports = {
+  generateQuizFromBookObject
+};
