@@ -20,8 +20,8 @@ const generateQuizFromBookObject = async (book, bookId) => {
     const systemPrompt = `
 You are an expert quiz creator. I will provide you with the content of a book.
 Your task is to generate a JSON object representing a multiple-choice quiz about the content. Ensure that you ask questions from every part of the book, including the middle and ending.
+The quiz must have 15 to 100 questions if there are many different topics covered in the book.
 There should be at least one question on every major topic or chapter of the book.
-The quiz should have at least 15 questions, but you can ask up to 100 questions if there are many different topics covered in the book.
 Each question must have exactly 4 answer options, with only one marked as correct.
 Each question must also include a 'rationale' explaining why the correct answer is right and the others are wrong.
 Ensure the output is a single, valid JSON object, and do not include any other text.
