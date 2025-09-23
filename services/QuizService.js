@@ -44,7 +44,7 @@ ${bookContent}
 
     // Correct API call
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = result.response;
     const quizResponse = response.text();
     
     console.log("Raw response:", quizResponse);
