@@ -1,16 +1,23 @@
-// Use consistent CommonJS syntax throughout
+// quizService.js
 const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
-const generateQuizFromBookObject = async (bookContent, bookId) => {
+const generateQuizFromBookObject = async (book, bookId) => {
   try {
-    // Correct SDK initialization
+    // Initialize Gemini
     const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    
     console.log("Generating quiz...", process.env.GEMINI_API_KEY ? "API key found" : "API key missing");
-    
-    const prompt = `
+
+    // Prepare book content as a single long string
+    const bookContent = book.lines
+      .map((line, idx) => {
+        return `Line ${idx + 1}:\nArabic: ${line.Arabic || ""}\nEnglish: ${line.English || ""}\nCommentary: ${line.commentary || ""}\nRootwords: ${line.rootwords || ""}`;
+      })
+      .join("\n\n");
+
+    // Build prompt instructions
+    const systemPrompt = `
 You are an expert quiz creator. I will provide you with the content of a book.
 Your task is to generate a JSON object representing a multiple-choice quiz about the content.
 The quiz should have at least 10 questions.
@@ -32,63 +39,65 @@ The structure must follow this format:
     }
   ]
 }
-
-Book content:
-"""
-${bookContent}
-"""
     `;
 
-    // Correct API call
+    // Call Gemini with structured contents
     const result = await genAI.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
+      model: "gemini-1.5-flash", // or gemini-1.5-pro for bigger context
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: systemPrompt },
+            { text: `Book title: ${book.title || ""}, Author: ${book.author || ""}` },
+            { text: bookContent }
+          ]
+        }
+      ]
     });
-    const quizResponse = result.text;
-    
+
+    // Extract raw text
+    const quizResponse = await result.response.text();
     console.log("Raw response:", quizResponse);
-    
-    // Clean the response text (remove markdown code blocks if present)
+
+    // Clean up fenced code blocks if Gemini added them
     let cleanedResponse = quizResponse.trim();
-    if (cleanedResponse.startsWith('```json')) {
-      cleanedResponse = cleanedResponse.replace(/```json\n?/, '').replace(/\n?```$/, '');
-    } else if (cleanedResponse.startsWith('```')) {
-      cleanedResponse = cleanedResponse.replace(/```\n?/, '').replace(/\n?```$/, '');
+    if (cleanedResponse.startsWith("```json")) {
+      cleanedResponse = cleanedResponse.replace(/```json\n?/, "").replace(/\n?```$/, "");
+    } else if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/```\n?/, "").replace(/\n?```$/, "");
     }
-    
-    // Parse the JSON string from the Gemini response with error handling
+
+    // Parse JSON
     let quizData;
     try {
       quizData = JSON.parse(cleanedResponse);
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError);
-      console.error('Raw response that failed to parse:', cleanedResponse);
-      throw new Error('Failed to parse quiz JSON response');
+    } catch (err) {
+      console.error("JSON parsing error:", err);
+      console.error("Raw response that failed to parse:", cleanedResponse);
+      throw new Error("Failed to parse quiz JSON response");
     }
 
-    // Validate the structure
+    // Validate structure
     if (!quizData.questions || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
-      throw new Error('Invalid quiz structure: missing or empty questions array');
+      throw new Error("Invalid quiz structure: missing or empty questions array");
     }
 
-    // Create quiz data with book reference
+    // Save to DB
     const quizToSave = {
       book: bookId,
       questions: quizData.questions
     };
-
-    // Save the new quiz to the database
     const newQuiz = new Quiz(quizToSave);
     await newQuiz.save();
-    
-    console.log('Quiz generated and saved successfully!');
+
+    console.log("Quiz generated and saved successfully!");
     return newQuiz;
 
   } catch (error) {
-    console.error('Error generating quiz:', error);
+    console.error("Error generating quiz:", error);
     throw new Error(`Failed to generate quiz: ${error.message}`);
   }
 };
 
-// Use CommonJS export
 module.exports = { generateQuizFromBookObject };
