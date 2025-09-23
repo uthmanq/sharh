@@ -1,15 +1,15 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
 console.log(process.env.GEMINI_API_KEY);
 
-const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY});
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
   try {
     console.log("generating...",process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       You are an expert quiz creator. I will provide you with the content of a book.
