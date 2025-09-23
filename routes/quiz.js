@@ -54,15 +54,17 @@ router.get('/book/:bookId', async (req, res) => {
     }
 
     try {
+        // First verify the book exists
+        const book = await Book.findById(bookId);
+        if (!book) {
+            return res.status(404).json({ error: 'Book not found' });
+        }
+
         const quizzes = await Quiz.find({ book: bookId })
             .sort({ createdAt: -1 }) // Most recent first
             .select('_id bookTitle createdAt questions');
 
-        if (!quizzes.length) {
-            return res.status(404).json({ error: 'No quizzes found for this book' });
-        }
-
-        // Return summary info for all quizzes
+        // Return summary info for all quizzes (empty array if none found)
         const quizSummaries = quizzes.map(quiz => ({
             id: quiz._id,
             bookTitle: quiz.bookTitle,
@@ -72,6 +74,7 @@ router.get('/book/:bookId', async (req, res) => {
 
         return res.json({
             bookId,
+            bookTitle: book.title,
             quizzes: quizSummaries,
             total: quizzes.length
         });
