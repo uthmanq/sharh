@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
-const genAI = new GoogleGenerativeAI({{ apiKey: process.env.GEMINI_API_KEY});
+const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY});
 
 const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
   try {
