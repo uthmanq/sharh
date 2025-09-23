@@ -24,7 +24,7 @@ router.post('/generate/:bookId', authenticateToken(['admin']), async (req, res) 
         }
 
         // Generate quiz using the book object
-        const quiz = await quizService.generateQuizFromBookObject(book);
+        const quiz = await quizService.generateQuizFromBookObject(book, book._id);
 
         return res.status(201).json({
             id: quiz._id,
