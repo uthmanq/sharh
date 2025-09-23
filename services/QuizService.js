@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY});
 
 const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
   try {
-    console.log(process.env.GEMINI_API_KEY);
+    console.log("generating...",process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
