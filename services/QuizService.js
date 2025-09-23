@@ -1,12 +1,12 @@
 // Use consistent CommonJS syntax throughout
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
 const generateQuizFromBookObject = async (bookContent, bookId, bookTitle) => {
   try {
     // Correct SDK initialization
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
     
     console.log("Generating quiz...", process.env.GEMINI_API_KEY ? "API key found" : "API key missing");
     
