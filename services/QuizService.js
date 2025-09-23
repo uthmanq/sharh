@@ -57,7 +57,7 @@ The structure must follow this format:
     });
 
     // Extract raw text
-    const quizResponse = await result.response.text();
+    const quizResponse = await result.text;
     console.log("Raw response:", quizResponse);
 
     // Clean up fenced code blocks if Gemini added them
