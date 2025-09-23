@@ -53,6 +53,7 @@ const fileRoutes = require('./routes/files');
 const bookmarkRoutes = require('./routes/bookmarks');
 const feedbackRoutes = require('./routes/feedbacks');
 const audioRoutes = require('./routes/audio');
+const quizRoutes = require('./routes/quiz');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -62,6 +63,8 @@ app.use('/files', fileRoutes);
 app.use('/bookmarks', bookmarkRoutes);
 app.use('/feedback', feedbackRoutes);
 app.use('/audio', audioRoutes);
+app.use('/quiz', quizRoutes);
+
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
