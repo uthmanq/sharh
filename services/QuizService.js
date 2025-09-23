@@ -6,12 +6,9 @@ const { Quiz } = require('../models/QuizModel.js');
 const generateQuizFromBookObject = async (bookContent, bookId, bookTitle) => {
   try {
     // Correct SDK initialization
-    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
     console.log("Generating quiz...", process.env.GEMINI_API_KEY ? "API key found" : "API key missing");
-    
-    // Get the model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
 You are an expert quiz creator. I will provide you with the content of a book.
@@ -43,9 +40,11 @@ ${bookContent}
     `;
 
     // Correct API call
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const quizResponse = response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+    });
+    const quizResponse = result.text;
     
     console.log("Raw response:", quizResponse);
     
