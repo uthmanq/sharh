@@ -8,7 +8,8 @@ const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY});
 
 const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    console.log(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       You are an expert quiz creator. I will provide you with the content of a book.
