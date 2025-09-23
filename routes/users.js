@@ -345,6 +345,82 @@ router.post('/admin/email', authenticateToken(['admin']), async (req, res) => {
     }
 });
 
-module.exports = router;
+/**
+ * @swagger
+ * /user/reset-password:
+ *   post:
+ *     summary: Reset password using a valid reset token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The password reset token from the email
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 description: The new password
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: 'Token and new password are required' });
+        }
+
+        // Verify the token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, SECRET_KEY);
+        } catch (err) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        // Ensure token is for password reset
+        if (decoded.type !== 'password-reset') {
+            return res.status(400).json({ error: 'Invalid token type' });
+        }
+
+        // Find the user
+        const user = await User.findById(decoded.id);
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid token or user not found' });
+        }
+
+        // Optional: check stored token + expiry
+        if (
+            !user.passwordResetToken ||
+            user.passwordResetToken !== token ||
+            !user.passwordResetExpires ||
+            user.passwordResetExpires < Date.now()
+        ) {
+            return res.status(400).json({ error: 'Token expired or invalid' });
+        }
+
+        // Update the password
+        user.password = newPassword;
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        console.error('Error in reset-password:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 module.exports = router;
