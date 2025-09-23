@@ -7,7 +7,7 @@ const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
-const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
+const generateQuizFromBookObject = async (bookContent, bookId, bookTitle) => {
   try {
     // New SDK initialization
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -72,3 +72,5 @@ const generateQuizFromBook = async (bookContent, bookId, bookTitle) => {
     throw new Error('Failed to generate quiz.');
   }
 };
+
+export { generateQuizFromBookObject };
