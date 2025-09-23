@@ -3,12 +3,28 @@ const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config({ path: '../.env' });
 const { Quiz } = require('../models/QuizModel.js');
 
-const generateQuizFromBookObject = async (bookContent, bookId, bookTitle) => {
+const generateQuizFromBookObject = async (book) => {
   try {
-    // Correct SDK initialization
-    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Validate input
+    if (!book) {
+      throw new Error('Book object is required');
+    }
     
-    console.log("Generating quiz...", process.env.GEMINI_API_KEY ? "API key found" : "API key missing");
+    if (!book._id) {
+      throw new Error('Book must have an _id');
+    }
+
+    // Extract content from book object (adjust this based on your book schema)
+    const bookContent = book.content || book.text || book.description || '';
+    if (!bookContent) {
+      throw new Error('Book content is empty or missing');
+    }
+
+    console.log(`Generating quiz for book: ${book.title || book.name || 'Unknown Title'}`);
+    console.log("API key status:", process.env.GEMINI_API_KEY ? "Found" : "Missing");
+    
+    // Correct SDK initialization
+    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
     
     const prompt = `
 You are an expert quiz creator. I will provide you with the content of a book.
@@ -40,11 +56,9 @@ ${bookContent}
     `;
 
     // Correct API call
-    const result = await genAI.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
-    });
-    const quizResponse = result.text;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const quizResponse = result.response.text();
     
     console.log("Raw response:", quizResponse);
     
@@ -73,7 +87,7 @@ ${bookContent}
 
     // Create quiz data with book reference
     const quizToSave = {
-      book: bookId,
+      book: book._id,
       questions: quizData.questions
     };
 
