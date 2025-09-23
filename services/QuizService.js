@@ -74,7 +74,6 @@ ${bookContent}
     // Create quiz data with book reference
     const quizToSave = {
       book: bookId,
-      bookTitle: bookTitle,
       questions: quizData.questions
     };
 

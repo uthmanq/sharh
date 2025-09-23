@@ -35,10 +35,6 @@ const QuizSchema = new Schema({
     ref: 'Book',
     required: true,
   },
-  bookTitle: {
-    type: String,
-    required: true,
-  },
   questions: {
     type: [QuestionSchema],
     required: true,
