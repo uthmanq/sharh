@@ -99,7 +99,7 @@ router.get('/book/:bookId/latest', async (req, res) => {
     try {
         const quiz = await Quiz.findOne({ book: bookId })
             .sort({ createdAt: -1 }) // Most recent first
-            .populate('book', 'title author'); // Optionally populate book info
+            .populate('book', 'title author difficulty'); // Optionally populate book info
 
         if (!quiz) {
             return res.status(404).json({ error: 'No quiz found for this book' });
