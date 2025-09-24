@@ -410,7 +410,7 @@ router.delete('/:bookId', authenticateToken(['admin']), async (req, res) => {
 router.get('/:bookId/all', async (req, res) => {
     try {
       const { bookId } = req.params;
-      const { fields } = req.query; // comma-separated list: 'arabic', 'english', 'commentary'
+      const { fields, voice } = req.query; // comma-separated list: 'arabic', 'english', 'commentary'
   
       // Verify book exists
       const book = await Book.findById(bookId);
@@ -479,8 +479,9 @@ router.get('/:bookId/all', async (req, res) => {
           };
         })
         .filter(file => file !== null)
-        .filter(file => requestedFields.includes(file.field.toLowerCase()));
-  
+        .filter(file => requestedFields.includes(file.field.toLowerCase()))
+        .filter(file => !voice || file.voice?.toLowerCase() === voice.toLowerCase());
+
       // Group audio files by line and field
       const audioByLine = {};
       for (const file of parsedFiles) {
