@@ -92,6 +92,114 @@ router.get('/jobs/:jobId', authenticateToken(['admin']), async (req, res) => {
   }
 });
 
+// Optimized: Get all lines + fields for a book, showing whether audio exists for a given voice
+router.get('/:bookId/lines-with-audio', async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const { voice = 'alloy' } = req.query;
+
+    // Verify book exists
+    const book = await Book.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
+    // 1. List all audio files in S3 for this book
+    const bookPrefix = `${bookId}/`;
+    const s3 = new (require('aws-sdk')).S3({
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      region: process.env.AWS_REGION,
+    });
+
+    let allAudioFiles = [];
+    let continuationToken = null;
+
+    do {
+      const params = {
+        Bucket: audioService.bucketName,
+        Prefix: bookPrefix,
+      };
+      if (continuationToken) params.ContinuationToken = continuationToken;
+
+      const objects = await s3.listObjectsV2(params).promise();
+      if (objects.Contents) {
+        allAudioFiles = allAudioFiles.concat(objects.Contents);
+      }
+
+      continuationToken = objects.NextContinuationToken;
+    } while (continuationToken);
+
+    // 2. Parse all audio files and filter by voice
+    const parsedFiles = allAudioFiles
+      .map(obj => {
+        const parsed = audioService.parseS3Key(obj.Key);
+        if (!parsed) return null;
+        return {
+          s3Key: obj.Key,
+          lineId: parsed.lineId,
+          field: parsed.field,
+          voice: parsed.voice,
+          lastModified: obj.LastModified
+        };
+      })
+      .filter(file => file && file.voice?.toLowerCase() === voice.toLowerCase());
+
+    // 3. Build lookup: { lineId: { field: s3Key } }
+    const audioLookup = {};
+    for (const file of parsedFiles) {
+      if (!audioLookup[file.lineId]) audioLookup[file.lineId] = {};
+      audioLookup[file.lineId][file.field] = file;
+    }
+
+    // 4. Build response lines
+    const response = {
+      success: true,
+      bookId,
+      bookTitle: book.title,
+      voice,
+      lines: []
+    };
+
+    for (const line of book.lines.sort((a, b) => (a.lineNumber || 0) - (b.lineNumber || 0))) {
+      const lineId = line._id.toString();
+      const lineEntry = {
+        lineId,
+        lineNumber: line.lineNumber,
+        fields: {}
+      };
+
+      for (const field of AVAILABLE_FIELDS) {
+        const text =
+          field === 'arabic' ? line.Arabic || '' :
+          field === 'english' ? line.English || '' :
+          field === 'commentary' ? line.commentary || '' : '';
+
+        const audioFile = audioLookup[lineId]?.[field];
+        lineEntry.fields[field] = {
+          text,
+          hasAudio: !!audioFile,
+          audioUrl: audioFile
+            ? await audioService.getPresignedUrl(audioFile.s3Key, 3600)
+            : null
+        };
+      }
+
+      response.lines.push(lineEntry);
+    }
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Error building line audio list:', error);
+    res.status(500).json({
+      error: 'Failed to get line audio list',
+      details: error.message
+    });
+  }
+});
+
+
 router.get('/jobs', authenticateToken(['admin']), async (req, res) => {
   try {
     const jobs = await AudioJob.find().sort({ createdAt: -1 }); // latest first
