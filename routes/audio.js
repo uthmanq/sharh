@@ -202,7 +202,11 @@ router.get('/:bookId/lines-with-audio', async (req, res) => {
 
 router.get('/jobs', authenticateToken(['admin']), async (req, res) => {
   try {
-    const jobs = await AudioJob.find().sort({ createdAt: -1 }); // latest first
+    const jobs = await AudioJob.find()
+      .sort({ createdAt: -1 })
+      .populate('bookId', 'title author category progress difficulty'); 
+      // only pulling basic fields
+
     res.json({
       success: true,
       jobs
@@ -212,6 +216,7 @@ router.get('/jobs', authenticateToken(['admin']), async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch audio jobs' });
   }
 });
+
 
 // Generate audio for multiple fields of a line
 router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
