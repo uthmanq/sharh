@@ -92,6 +92,18 @@ router.get('/jobs/:jobId', authenticateToken(['admin']), async (req, res) => {
   }
 });
 
+router.get('/jobs', authenticateToken(['admin']), async (req, res) => {
+  try {
+    const jobs = await AudioJob.find().sort({ createdAt: -1 }); // latest first
+    res.json({
+      success: true,
+      jobs
+    });
+  } catch (err) {
+    console.error('Error fetching audio jobs:', err);
+    res.status(500).json({ error: 'Failed to fetch audio jobs' });
+  }
+});
 
 // Generate audio for multiple fields of a line
 router.post('/:bookId/lines/:lineId/batch', async (req, res) => {
