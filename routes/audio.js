@@ -4,6 +4,7 @@ const router = express.Router();
 const AudioS3Service = require('../services/AudioS3Service');
 const Book = require('../models/Book');
 const authenticateToken = require('../middleware/authenticate');
+const AudioJob = require('../models/AudioJob');
 
 const audioService = new AudioS3Service();
 
@@ -28,6 +29,67 @@ router.get('/voices', (req, res) => {
 // Get available fields
 router.get('/fields', (req, res) => {
   res.json({ fields: AVAILABLE_FIELDS });
+});
+
+  router.post('/:bookId/generate', authenticateToken(['admin']), async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const { voice = 'alloy' } = req.body;
+
+    const book = await Book.findById(bookId);
+    if (!book) return res.status(404).json({ error: 'Book not found' });
+
+    const job = await AudioJob.create({ bookId, voice, status: 'pending' });
+
+    // Kick off background task
+    process.nextTick(async () => {
+      try {
+        job.status = 'in_progress';
+        await job.save();
+
+        const total = book.lines.length * AVAILABLE_FIELDS.length;
+        let done = 0;
+
+        for (const line of book.lines) {
+          for (const field of AVAILABLE_FIELDS) {
+            try {
+              await audioService.getOrCreateAudio(bookId, line._id, line, field, voice);
+            } catch (e) {
+              console.error(`Error generating audio for line ${line._id} field ${field}:`, e);
+            }
+            done++;
+            job.progress = Math.round((done / total) * 100);
+            job.updatedAt = new Date();
+            await job.save();
+          }
+        }
+
+        job.status = 'completed';
+        job.updatedAt = new Date();
+        await job.save();
+      } catch (err) {
+        job.status = 'failed';
+        job.error = err.message;
+        job.updatedAt = new Date();
+        await job.save();
+      }
+    });
+
+    res.json({ success: true, jobId: job._id });
+  } catch (err) {
+    console.error('Error starting audio job:', err);
+    res.status(500).json({ error: 'Failed to start audio generation' });
+  }
+});
+
+router.get('/jobs/:jobId', authenticateToken(['admin']), async (req, res) => {
+  try {
+    const job = await AudioJob.findById(req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch job' });
+  }
 });
 
 
@@ -542,5 +604,7 @@ router.get('/:bookId/all', async (req, res) => {
       });
     }
   });
+
+
   
 module.exports = router;
