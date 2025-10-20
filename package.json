@@ -45,7 +45,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "promoteUser": "node scripts/promoteUser.js"
+    "promoteUser": "node scripts/promoteUser.js",
+    "createIngestJobs": "node scripts/createAgentsetIngestJobs.js"
   },
   "eslintConfig": {
     "extends": [
