@@ -53,6 +53,8 @@ const bookmarkRoutes = require('./routes/bookmarks');
 const feedbackRoutes = require('./routes/feedbacks');
 const audioRoutes = require('./routes/audio');
 const quizRoutes = require('./routes/quiz');
+const folderRoutes = require('./routes/folders');
+const noteRoutes = require('./routes/notes');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -63,6 +65,8 @@ app.use('/bookmarks', bookmarkRoutes);
 app.use('/feedback', feedbackRoutes);
 app.use('/audio', audioRoutes);
 app.use('/quiz', quizRoutes);
+app.use('/folders', folderRoutes);
+app.use('/notes', noteRoutes);
 
 
 // Error Handling Middleware
