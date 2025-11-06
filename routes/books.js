@@ -651,17 +651,13 @@ router.get('/:bookId/lines', async (req, res) => {
 router.post('/:bookId/lines', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const position = req.body.position;
     const newLine = req.body.newLine;
-    if (!newLine || !newLine.Arabic || !newLine.English) {
+    if (!newLine) {
         return res.status(400).send('Bad Request: Missing required fields');
     }
     try {
         const book = await Book.findById(req.params.bookId);
         if (!book) {
             return res.status(404).send('Not Found: No book with the given ID exists');
-        }
-        const existingLine = book.lines.find(line => line.Arabic === newLine.Arabic);
-        if (existingLine) {
-            return res.status(400).send('Bad Request: Line with the same Arabic field already exists');
         }
 
         if (position != null && position >= 0 && position <= book.lines.length) {
@@ -695,17 +691,7 @@ router.post('/:bookId/lines/bulk', authenticateToken(['member', 'editor', 'admin
     try {
       const book = await Book.findById(req.params.bookId);
       if (!book) return res.status(404).send('Book not found');
-  
-      // validate and filter duplicates
-      for (const line of newLines) {
-        if (!line.Arabic || !line.English) {
-          return res.status(400).send('Each line must have Arabic and English');
-        }
-        if (book.lines.find(l => l.Arabic === line.Arabic)) {
-          return res.status(400).send(`Duplicate Arabic line: ${line.Arabic}`);
-        }
-      }
-  
+
       if (position != null && position >= 0 && position <= book.lines.length) {
         book.lines.splice(position, 0, ...newLines);
       } else {
@@ -756,7 +742,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 // PUT /:bookId/lines/:lineId
 router.put('/:bookId/lines/:lineId', authenticateToken(['member', 'editor', 'admin']), EditGuard({ requireBook = true } = {}), async (req, res) => {
     const updatedLine = req.body.updatedLine;
-    if (!updatedLine || !updatedLine.Arabic || !updatedLine.English) {
+    if (!updatedLine) {
         return res.status(400).send('Bad Request: Missing required fields');
     }
     try {
