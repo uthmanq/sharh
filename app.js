@@ -11,8 +11,7 @@ const path = require('path');
 const app = express();
 
 const ENVIRONMENT = process.env.ENVIRONMENT || 'development';
-const DBNAME = process.env.DBNAME;
-const DBADDRESS = process.env.DBADDRESS;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 const args = process.argv.slice(2); // Get command-line arguments
 if (args.includes('--teststripe')) {
@@ -39,7 +38,7 @@ app.use(cors({
 }));
 
 // Connect to MongoDB
-mongoose.connect(`mongodb://${DBADDRESS}:27017/${DBNAME}`, {
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('MongoDB Connected'))
