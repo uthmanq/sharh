@@ -1,8 +1,34 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const Note = require('../models/Note');
 const Folder = require('../models/Folder');
 const authenticateToken = require('../middleware/authenticate');
+
+// GET search books from usul.ai API
+router.get('/search-books', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
+    const { q, limit = 20, locale = 'en' } = req.query;
+
+    if (!q) {
+        return res.status(400).send('Bad Request: Search query (q) is required');
+    }
+
+    try {
+        const searchUrl = `https://api.usul.ai/search/books`;
+        const response = await axios.get(searchUrl, {
+            params: {
+                q,
+                limit: parseInt(limit),
+                locale
+            }
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error searching books from usul.ai:', error.message);
+        res.status(500).send('Internal Server Error: Could not search books from usul.ai API');
+    }
+});
 
 // GET all notes for a specific folder
 router.get('/folder/:folderId', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
@@ -36,9 +62,14 @@ router.get('/folder/:folderId', authenticateToken(['user', 'editor', 'member', '
     }
 });
 
-// GET a single note by ID
+// GET a single note by ID with pagination
 router.get('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
     try {
+        const { page = 1, limit = 10 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
         const note = await Note.findById(req.params.noteId);
 
         if (!note) {
@@ -50,17 +81,28 @@ router.get('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin']),
             return res.status(403).send('Forbidden: You do not have permission to access this note');
         }
 
+        const totalSections = note.sections.length;
+        const paginatedSections = note.sections.slice(skip, skip + limitNum);
+
         const formattedNote = {
             id: note._id,
             title: note.title,
-            sections: note.sections.map(section => ({
+            sections: paginatedSections.map(section => ({
                 id: section._id,
                 title: section.title,
                 notes: section.notes
             })),
             folderId: note.folder,
             createdAt: note.createdAt,
-            lastModified: note.lastModified
+            lastModified: note.lastModified,
+            pagination: {
+                currentPage: pageNum,
+                totalPages: Math.ceil(totalSections / limitNum),
+                totalSections: totalSections,
+                sectionsPerPage: limitNum,
+                hasNextPage: skip + limitNum < totalSections,
+                hasPreviousPage: pageNum > 1
+            }
         };
 
         res.json(formattedNote);
@@ -287,5 +329,220 @@ router.delete('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin'
         res.status(500).send('Internal Server Error');
     }
 });
+// POST import a book from usul-data API (converted to BlockNote block format)
+// POST import a book from usul-data API — uses <span data-type="title"> for section breaks
+router.post(
+    '/import-book',
+    authenticateToken(['user', 'editor', 'member', 'admin']),
+    async (req, res) => {
+        const { folderId, versionSource, versionValue, bookTitle } = req.body;
+
+        if (!folderId || !versionSource || !versionValue) {
+            return res
+                .status(400)
+                .send('Bad Request: folderId, versionSource, and versionValue are required');
+        }
+
+        try {
+            // --- Verify folder ownership ---
+            const folder = await Folder.findById(folderId);
+            if (!folder) {
+                return res.status(404).send('Not Found: No folder with the given ID exists');
+            }
+            if (!folder.owner.equals(req.user._id)) {
+                return res
+                    .status(403)
+                    .send('Forbidden: You do not have permission to add notes to this folder');
+            }
+
+            // --- Fetch book content ---
+            const bookUrl = `https://assets.usul.ai/book-content/${versionSource}/${versionValue}.json`;
+            let bookContent;
+            try {
+                const response = await axios.get(bookUrl);
+                bookContent = response.data;
+            } catch (error) {
+                console.error('Error fetching book from usul-data:', error.message);
+                return res
+                    .status(404)
+                    .send('Not Found: Could not fetch book content from usul-data API');
+            }
+
+            // --- Helper: Convert plain text → BlockNote JSON (right-aligned) ---
+            function toBlockNoteJSON(text) {
+                if (!text || typeof text !== 'string') {
+                    return JSON.stringify([{ type: 'paragraph', content: [] }]);
+                }
+
+                // Strip leftover HTML tags
+                const clean = text.replace(/<[^>]+>/g, '').trim();
+
+                // Convert to paragraphs
+                const paragraphs = clean
+                    .split(/\n+/)
+                    .filter(line => line.trim() !== '')
+                    .map(line => ({
+                        type: 'paragraph',
+                        props: { textAlignment: 'right' },
+                        content: [{ type: 'text', text: line, styles: {} }],
+                    }));
+
+                if (paragraphs.length === 0) {
+                    paragraphs.push({
+                        type: 'paragraph',
+                        props: { textAlignment: 'right' },
+                        content: [],
+                    });
+                }
+
+                return JSON.stringify(paragraphs);
+            }
+
+            // --- Helper: Parse <span data-type="title"> headings into sections ---
+            function toBlockNoteSections(htmlText) {
+                if (!htmlText || typeof htmlText !== 'string') return [];
+
+                // Normalize breaks for easier splitting
+                const normalized = htmlText.replace(/<br\s*\/?>/gi, '\n');
+
+                // Split on spans marking titles
+                const parts = normalized.split(
+                    /<span[^>]*data-type=["']title["'][^>]*>(.*?)<\/span>/gi
+                );
+
+                const sections = [];
+
+                // Optional preface before first heading
+                if (parts[0]?.trim()) {
+                    sections.push({
+                        title: '',
+                        notes: toBlockNoteJSON(parts[0]),
+                    });
+                }
+
+                // Iterate over [title, content] pairs
+                for (let i = 1; i < parts.length; i += 2) {
+                    const title = parts[i]?.trim() || `Section ${sections.length + 1}`;
+                    const content = parts[i + 1] || '';
+
+                    sections.push({
+                        title,
+                        notes: toBlockNoteJSON(content),
+                    });
+                }
+
+                return sections;
+            }
+
+            // --- Build sections ---
+            const sections = [];
+
+            if (bookContent.pages && Array.isArray(bookContent.pages)) {
+                const pages = bookContent.pages;
+                const headings = bookContent.headings || [];
+
+                const pageToHeading = {};
+                for (const heading of headings) {
+                    pageToHeading[heading.pageIndex] = heading.title;
+                }
+
+                for (let i = 0; i < pages.length; i++) {
+                    const page = pages[i];
+                    if (page.text) {
+                        // If <span data-type="title"> tags exist, split them
+                        const derived = toBlockNoteSections(page.text);
+
+                        if (derived.length > 0) {
+                            sections.push(...derived);
+                        } else {
+                            // Fallback: use normal page title
+                            const sectionTitle =
+                                pageToHeading[i] || `Vol ${page.vol || '1'}, Page ${page.page || i + 1}`;
+
+                            sections.push({
+                                title: sectionTitle,
+                                notes: toBlockNoteJSON(page.text),
+                            });
+                        }
+                    }
+                }
+            } else if (Array.isArray(bookContent)) {
+                for (const [index, chapter] of bookContent.entries()) {
+                    const sectionTitle =
+                        chapter.title || chapter.heading || `Chapter ${index + 1}`;
+                    const sectionContent =
+                        chapter.content || chapter.text || JSON.stringify(chapter);
+
+                    const derived = toBlockNoteSections(sectionContent);
+                    sections.push(...(derived.length ? derived : [{
+                        title: sectionTitle,
+                        notes: toBlockNoteJSON(sectionContent),
+                    }]));
+                }
+            } else if (bookContent.parts || bookContent.chapters) {
+                const parts = bookContent.parts || bookContent.chapters;
+                for (const [index, part] of parts.entries()) {
+                    const sectionTitle = part.title || part.heading || `Part ${index + 1}`;
+                    const sectionContent = part.content || part.text || JSON.stringify(part);
+
+                    const derived = toBlockNoteSections(sectionContent);
+                    sections.push(...(derived.length ? derived : [{
+                        title: sectionTitle,
+                        notes: toBlockNoteJSON(sectionContent),
+                    }]));
+                }
+            } else if (bookContent.content || bookContent.text) {
+                const derived = toBlockNoteSections(
+                    bookContent.content || bookContent.text
+                );
+                sections.push(...(derived.length ? derived : [{
+                    title: 'Content',
+                    notes: toBlockNoteJSON(bookContent.content || bookContent.text),
+                }]));
+            } else {
+                sections.push({
+                    title: 'Book Content',
+                    notes: toBlockNoteJSON(JSON.stringify(bookContent, null, 2)),
+                });
+            }
+
+            // --- Save note ---
+            const noteTitle = bookTitle || `Imported Book - ${versionSource}/${versionValue}`;
+
+            const newNote = new Note({
+                title: noteTitle,
+                sections,
+                owner: req.user._id,
+                folder: folderId,
+            });
+
+            const savedNote = await newNote.save();
+
+            // Add reference in folder
+            folder.notes.push(savedNote._id);
+            await folder.save();
+
+            const formattedNote = {
+                id: savedNote._id,
+                title: savedNote.title,
+                sections: savedNote.sections.map(section => ({
+                    id: section._id,
+                    title: section.title,
+                    notes: section.notes,
+                })),
+                folderId: savedNote.folder,
+                createdAt: savedNote.createdAt,
+                lastModified: savedNote.lastModified,
+            };
+
+            res.status(201).json(formattedNote);
+        } catch (err) {
+            console.error('Error importing book:', err);
+            res.status(500).send('Internal Server Error');
+        }
+    }
+);
+
+
 
 module.exports = router;
