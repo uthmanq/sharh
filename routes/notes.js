@@ -329,7 +329,6 @@ router.delete('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin'
         res.status(500).send('Internal Server Error');
     }
 });
-// POST import a book from usul-data API (converted to BlockNote block format)
 // POST import a book from usul-data API — uses <span data-type="title"> for section breaks
 router.post(
     '/import-book',
@@ -384,7 +383,7 @@ router.post(
                     .map(line => ({
                         type: 'paragraph',
                         props: { textAlignment: 'right' },
-                        content: [{ type: 'text', text: line, styles: {} }],
+                        content: [{ type: 'text', text: line, styles: { arabicText: true } }],
                     }));
 
                 if (paragraphs.length === 0) {
