@@ -9,6 +9,7 @@ const stripeConfig = require('../config/stripeConfig')
 const stripe = require('stripe')(stripeConfig.secretKey);
 const SECRET_KEY = process.env.SECRET_KEY;
 const { sendEmail } = require('../scripts/sendEmail');
+const passport = require('../config/passport');
 
 
 
@@ -422,5 +423,103 @@ router.post('/reset-password', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+// ============================================
+// GOOGLE OAUTH ROUTES
+// ============================================
+
+// Initiate Google OAuth
+router.get('/auth/google',
+    passport.authenticate('google', {
+        scope: ['profile', 'email']
+    })
+);
+
+// Google OAuth callback
+router.get('/auth/google/callback',
+    passport.authenticate('google', {
+        session: false,
+        failureRedirect: process.env.FRONTEND_URL || 'https://sharhapp.com/login?error=oauth_failed'
+    }),
+    async (req, res) => {
+        try {
+            // Generate JWT token for the authenticated user
+            const token = jwt.sign({ id: req.user._id }, SECRET_KEY, {
+                expiresIn: '24h'
+            });
+
+            const user = {
+                id: req.user._id,
+                username: req.user.username,
+                email: req.user.email,
+                stripeCustomerId: req.user.stripeCustomerId,
+                roles: req.user.roles,
+                authMethod: req.user.authMethod,
+                profilePicture: req.user.profilePicture
+            };
+
+            // Redirect to frontend with token
+            // For development, you might want to redirect to localhost:3000
+            const frontendURL = process.env.FRONTEND_URL || 'https://sharhapp.com';
+            res.redirect(`${frontendURL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+        } catch (err) {
+            console.error('Error in OAuth callback:', err);
+            const frontendURL = process.env.FRONTEND_URL || 'https://sharhapp.com';
+            res.redirect(`${frontendURL}/login?error=auth_error`);
+        }
+    }
+);
+
+// Link Google account to existing user (for authenticated users)
+router.get('/auth/google/link',
+    authenticateToken(['user', 'editor', 'member', 'admin']),
+    (req, _res, next) => {
+        // Store the current user ID in session for later verification
+        req.session = req.session || {};
+        req.session.linkUserId = req.user._id.toString();
+        next();
+    },
+    passport.authenticate('google', {
+        scope: ['profile', 'email']
+    })
+);
+
+// Unlink Google account
+router.post('/auth/google/unlink',
+    authenticateToken(['user', 'editor', 'member', 'admin']),
+    async (req, res) => {
+        try {
+            const user = await User.findById(req.user._id);
+
+            if (!user) {
+                return res.status(404).send('User not found');
+            }
+
+            // Check if user has a password set
+            if (!user.password && user.authMethod === 'google') {
+                return res.status(400).json({
+                    error: 'Cannot unlink Google account: No password set. Please set a password first.'
+                });
+            }
+
+            user.googleId = undefined;
+            user.authMethod = 'local';
+            await user.save();
+
+            res.status(200).json({
+                message: 'Google account unlinked successfully',
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    authMethod: user.authMethod
+                }
+            });
+        } catch (err) {
+            console.error('Error unlinking Google account:', err);
+            res.status(500).send('Internal Server Error');
+        }
+    }
+);
 
 module.exports = router;

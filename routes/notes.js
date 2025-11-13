@@ -181,8 +181,26 @@ router.put('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin']),
             return res.status(403).send('Forbidden: You do not have permission to modify this note');
         }
 
-        if (title) note.title = title;
-        if (sections) note.sections = sections;
+        // Update title if provided
+        if (title !== undefined) note.title = title;
+
+        // Update only the sections that are provided in the payload
+        if (sections && Array.isArray(sections)) {
+            sections.forEach(updatedSection => {
+                // Find the section by ID in the existing sections
+                const existingSection = note.sections.id(updatedSection.id);
+
+                if (existingSection) {
+                    // Update the existing section
+                    if (updatedSection.title !== undefined) {
+                        existingSection.title = updatedSection.title;
+                    }
+                    if (updatedSection.notes !== undefined) {
+                        existingSection.notes = updatedSection.notes;
+                    }
+                }
+            });
+        }
 
         const updatedNote = await note.save();
 
