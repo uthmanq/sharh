@@ -343,7 +343,9 @@ async function init() {
         chrome.tabs.sendMessage(tab.id, { action: 'getSelection' }, (response) => {
             if (response && response.text) {
                 selectedText = response.text;
+                // Populate both Notes and Cards tabs with selected text
                 document.getElementById('selected-text').value = selectedText;
+                document.getElementById('card-front').value = selectedText;
             }
         });
     } catch (error) {
@@ -406,16 +408,14 @@ async function init() {
         createCardButton.disabled = !e.target.value;
     });
 
-    document.getElementById('use-selection-button').addEventListener('click', async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    document.getElementById('switch-button').addEventListener('click', () => {
+        const frontField = document.getElementById('card-front');
+        const backField = document.getElementById('card-back');
 
-        chrome.tabs.sendMessage(tab.id, { action: 'getSelection' }, (response) => {
-            if (response && response.text) {
-                document.getElementById('card-front').value = response.text;
-            } else {
-                showStatus('No text selected on the page', 'error', 'card-status-message');
-            }
-        });
+        // Swap the values
+        const temp = frontField.value;
+        frontField.value = backField.value;
+        backField.value = temp;
     });
 
     document.getElementById('create-card-button').addEventListener('click', async () => {
