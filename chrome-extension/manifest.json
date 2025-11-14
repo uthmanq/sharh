@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Sharh Notes Clipper",
+  "name": "Sharh Notes",
   "version": "1.0.0",
   "description": "Clip text from any webpage directly to your Sharh notes",
   "permissions": [
@@ -10,6 +10,7 @@
   ],
   "host_permissions": [
     "https://sharhapp.com/*",
+    "https://app.ummahspot.com/*",
     "http://localhost:*/*"
   ],
   "action": {

@@ -1,4 +1,4 @@
-const API_URL = 'https://app.ummahspot.com/api';
+const API_URL = 'https://app.ummahspot.com';
 
 // Get authentication token from storage
 async function getAuthToken() {
@@ -130,8 +130,8 @@ async function clipNote(noteId, body, section, url, isArabic) {
 }
 
 // Show status message
-function showStatus(message, type = 'success') {
-    const statusEl = document.getElementById('status-message');
+function showStatus(message, type = 'success', elementId = 'status-message') {
+    const statusEl = document.getElementById(elementId);
     statusEl.textContent = message;
     statusEl.className = `status-message ${type}`;
     statusEl.style.display = 'block';
@@ -189,40 +189,172 @@ async function populateNotes(folderId) {
     });
 }
 
+// Fetch card collections from API
+async function fetchCollections() {
+    const authToken = await getAuthToken();
+
+    if (!authToken) {
+        return null;
+    }
+
+    try {
+        console.log('Fetching collections from:', `${API_URL}/card-collections`);
+        const response = await fetch(`${API_URL}/card-collections`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('Collections response status:', response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Collections error response:', errorText);
+            throw new Error(`Failed to fetch collections: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Collections data:', data);
+        return data.collections || data;
+    } catch (error) {
+        console.error('Error fetching collections:', error);
+        showStatus(`Error loading collections: ${error.message}`, 'error', 'card-status-message');
+        return null;
+    }
+}
+
+// Create a new card
+async function createCard(front, back, collectionId, tags, notes) {
+    const authToken = await getAuthToken();
+
+    if (!authToken) {
+        showStatus('Please configure your API settings', 'error', 'card-status-message');
+        return false;
+    }
+
+    try {
+        const payload = {
+            front,
+            back,
+            collectionId
+        };
+
+        if (tags && tags.length > 0) {
+            payload.tags = tags;
+        }
+
+        if (notes) {
+            payload.notes = notes;
+        }
+
+        const response = await fetch(`${API_URL}/cards`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to create card');
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error creating card:', error);
+        showStatus(error.message, 'error', 'card-status-message');
+        return false;
+    }
+}
+
+// Populate collections dropdown
+async function populateCollections() {
+    const collectionSelect = document.getElementById('collection-select');
+    const collections = await fetchCollections();
+
+    if (!collections || collections.length === 0) {
+        collectionSelect.innerHTML = '<option value="">No collections found</option>';
+        return;
+    }
+
+    collectionSelect.innerHTML = '<option value="">Select a collection</option>';
+    collections.forEach(collection => {
+        const option = document.createElement('option');
+        option.value = collection.id || collection._id;
+        option.textContent = collection.name;
+        collectionSelect.appendChild(option);
+    });
+}
+
 // Initialize popup
 async function init() {
     const authToken = await getAuthToken();
     const loginSection = document.getElementById('login-section');
-    const clipSection = document.getElementById('clip-section');
+    const mainSection = document.getElementById('main-section');
+
+    // Setup open options button (needed for login section)
+    document.getElementById('open-options').addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+    });
 
     if (!authToken) {
         loginSection.style.display = 'block';
-        clipSection.style.display = 'none';
+        mainSection.style.display = 'none';
         return;
     }
 
     loginSection.style.display = 'none';
-    clipSection.style.display = 'block';
+    mainSection.style.display = 'block';
+
+    // Setup tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.dataset.tab;
+
+            // Update button states
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Update content visibility
+            tabContents.forEach(content => {
+                if (content.id === `${targetTab}-tab`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        });
+    });
 
     // Get selected text and current URL from the page
     let currentTabUrl = '';
+    let selectedText = '';
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         currentTabUrl = tab.url; // Store the current tab URL
 
         chrome.tabs.sendMessage(tab.id, { action: 'getSelection' }, (response) => {
             if (response && response.text) {
-                document.getElementById('selected-text').value = response.text;
+                selectedText = response.text;
+                document.getElementById('selected-text').value = selectedText;
             }
         });
     } catch (error) {
         console.error('Error getting selection:', error);
     }
 
-    // Load folders
+    // Load folders and collections
     await populateFolders();
+    await populateCollections();
 
-    // Setup event listeners
+    // Setup Notes tab event listeners
     document.getElementById('folder-select').addEventListener('change', (e) => {
         populateNotes(e.target.value);
     });
@@ -268,8 +400,64 @@ async function init() {
         }
     });
 
-    document.getElementById('open-options').addEventListener('click', () => {
-        chrome.runtime.openOptionsPage();
+    // Setup Cards tab event listeners
+    document.getElementById('collection-select').addEventListener('change', (e) => {
+        const createCardButton = document.getElementById('create-card-button');
+        createCardButton.disabled = !e.target.value;
+    });
+
+    document.getElementById('use-selection-button').addEventListener('click', async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+        chrome.tabs.sendMessage(tab.id, { action: 'getSelection' }, (response) => {
+            if (response && response.text) {
+                document.getElementById('card-front').value = response.text;
+            } else {
+                showStatus('No text selected on the page', 'error', 'card-status-message');
+            }
+        });
+    });
+
+    document.getElementById('create-card-button').addEventListener('click', async () => {
+        const front = document.getElementById('card-front').value.trim();
+        const back = document.getElementById('card-back').value.trim();
+        const collectionId = document.getElementById('collection-select').value;
+        const tagsInput = document.getElementById('card-tags').value.trim();
+        const notes = document.getElementById('card-notes').value.trim();
+
+        if (!front || !back || !collectionId) {
+            showStatus('Please fill in front, back, and select a collection', 'error', 'card-status-message');
+            return;
+        }
+
+        // Parse tags
+        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
+        // Show loading state
+        const createCardButton = document.getElementById('create-card-button');
+        const createCardText = document.getElementById('create-card-text');
+        const createCardLoader = document.getElementById('create-card-loader');
+
+        createCardButton.disabled = true;
+        createCardText.style.display = 'none';
+        createCardLoader.style.display = 'inline-block';
+
+        const result = await createCard(front, back, collectionId, tags, notes);
+
+        // Reset loading state
+        const collectionSelect = document.getElementById('collection-select');
+        createCardButton.disabled = !collectionSelect.value;
+        createCardText.style.display = 'inline';
+        createCardLoader.style.display = 'none';
+
+        if (result) {
+            showStatus('Card created successfully!', 'success', 'card-status-message');
+            // Clear the form
+            document.getElementById('card-front').value = '';
+            document.getElementById('card-back').value = '';
+            document.getElementById('card-tags').value = '';
+            document.getElementById('card-notes').value = '';
+        }
     });
 }
 

@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sharh Notes Clipper</title>
+    <title>Sharh Notes</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Clip to Sharh</h1>
+            <h1>Sharh</h1>
         </div>
 
         <div id="login-section" class="section" style="display: none;">
@@ -17,7 +17,14 @@
             <button id="open-options" class="btn btn-primary">Open Settings</button>
         </div>
 
-        <div id="clip-section" class="section" style="display: none;">
+        <div id="main-section" style="display: none;">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="notes">Notes</button>
+                <button class="tab-button" data-tab="cards">Cards</button>
+            </div>
+
+            <div id="notes-tab" class="tab-content active">
+                <div class="section">
             <div class="form-group">
                 <label for="selected-text">Selected Text:</label>
                 <textarea id="selected-text" rows="4" placeholder="Select text on the page or type here..."></textarea>
@@ -56,7 +63,55 @@
                 </button>
             </div>
 
-            <div id="status-message" class="status-message"></div>
+                    <div id="status-message" class="status-message"></div>
+                </div>
+            </div>
+
+            <div id="cards-tab" class="tab-content">
+                <div class="section">
+                    <div class="form-group">
+                        <label for="card-front">Front (Question):</label>
+                        <textarea id="card-front" rows="3" placeholder="Enter the question or prompt..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="card-back">Back (Answer):</label>
+                        <textarea id="card-back" rows="3" placeholder="Enter the answer..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="collection-select">Collection:</label>
+                        <select id="collection-select">
+                            <option value="">Loading collections...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="card-tags">Tags (comma-separated, optional):</label>
+                        <input type="text" id="card-tags" placeholder="e.g., vocabulary, grammar">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="card-notes">Notes (optional):</label>
+                        <textarea id="card-notes" rows="2" placeholder="Additional notes about this card..."></textarea>
+                    </div>
+
+                    <div class="actions">
+                        <button id="create-card-button" class="btn btn-primary" disabled>
+                            <span id="create-card-text">Create Card</span>
+                            <span id="create-card-loader" class="loader" style="display: none;"></span>
+                        </button>
+                    </div>
+
+                    <div class="actions" style="margin-top: 10px;">
+                        <button id="use-selection-button" class="btn btn-secondary">
+                            Use Selected Text as Front
+                        </button>
+                    </div>
+
+                    <div id="card-status-message" class="status-message"></div>
+                </div>
+            </div>
         </div>
     </div>
 

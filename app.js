@@ -72,6 +72,8 @@ const audioRoutes = require('./routes/audio');
 const quizRoutes = require('./routes/quiz');
 const folderRoutes = require('./routes/folders');
 const noteRoutes = require('./routes/notes');
+const cardRoutes = require('./routes/cards');
+const cardCollectionRoutes = require('./routes/cardCollections');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -84,6 +86,8 @@ app.use('/audio', audioRoutes);
 app.use('/quiz', quizRoutes);
 app.use('/folders', folderRoutes);
 app.use('/notes', noteRoutes);
+app.use('/cards', cardRoutes);
+app.use('/card-collections', cardCollectionRoutes);
 
 
 // Error Handling Middleware
