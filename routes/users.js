@@ -433,10 +433,12 @@ router.get('/auth/google',
     (req, res, next) => {
         // Store the redirect URL from query param in the state object
         const redirectTo = req.query.redirect || '/';
+        const source = req.query.source || 'web';
+        const redirectUrl = req.query.redirectUrl || null; // Extension redirect URL
 
         passport.authenticate('google', {
             scope: ['profile', 'email'],
-            state: { redirectTo }  // Pass state as object (requires store: true in strategy)
+            state: { redirectTo, source, redirectUrl }  // Pass state as object (requires store: true in strategy)
         })(req, res, next);
     }
 );
@@ -464,13 +466,25 @@ router.get('/auth/google/callback',
                 profilePicture: req.user.profilePicture
             };
 
-            // Extract redirect URL from state (stored via req.authInfo when store: true is set)
+            // Extract redirect URL and source from state (stored via req.authInfo when store: true is set)
             let redirectTo = '/';
-            if (req.authInfo && req.authInfo.state && req.authInfo.state.redirectTo) {
-                redirectTo = req.authInfo.state.redirectTo;
+            let source = 'web';
+            let redirectUrl = null;
+
+            if (req.authInfo && req.authInfo.state) {
+                redirectTo = req.authInfo.state.redirectTo || '/';
+                source = req.authInfo.state.source || 'web';
+                redirectUrl = req.authInfo.state.redirectUrl || null;
             }
 
-            // Redirect to frontend with token and redirect path
+            // Check if this is from extension
+            if (source === 'extension' && redirectUrl) {
+                // Redirect back to extension with token and user data
+                const extensionRedirect = `${redirectUrl}?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`;
+                return res.redirect(extensionRedirect);
+            }
+
+            // Normal web flow - redirect to frontend with token and redirect path
             const frontendURL = process.env.FRONTEND_URL || 'https://sharhapp.com';
             res.redirect(`${frontendURL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}&redirect=${encodeURIComponent(redirectTo)}`);
         } catch (err) {

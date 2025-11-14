@@ -112,9 +112,81 @@ router.get('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin']),
     }
 });
 
+// Helper function to convert plain text to BlockNote JSON format
+function textToBlockNoteJSON(text, url = null, isArabic = false) {
+    if (!text || typeof text !== 'string') {
+        return JSON.stringify([{ type: 'paragraph', content: [] }]);
+    }
+
+    // Convert plain text to BlockNote paragraphs with optional Arabic styling
+    const paragraphs = text
+        .split(/\n+/)
+        .filter(line => line.trim() !== '')
+        .map(line => ({
+            type: 'paragraph',
+            props: isArabic ? { textAlignment: 'right' } : {},
+            content: [{
+                type: 'text',
+                text: line.trim(),
+                styles: isArabic ? { arabicText: true } : {}
+            }]
+        }));
+
+    if (paragraphs.length === 0) {
+        paragraphs.push({
+            type: 'paragraph',
+            props: isArabic ? { textAlignment: 'right' } : {},
+            content: []
+        });
+    }
+
+    // Add URL reference at the end if provided
+    if (url) {
+        paragraphs.push({
+            type: 'paragraph',
+            content: [
+                { type: 'text', text: 'Source: ', styles: { italic: true } },
+                {
+                    type: 'link',
+                    href: url,
+                    content: [{ type: 'text', text: url, styles: {} }]
+                }
+            ]
+        });
+    }
+
+    return JSON.stringify(paragraphs);
+}
+
+// Helper function to append text to existing BlockNote JSON
+function appendToBlockNoteJSON(existingJSON, newText, url = null, isArabic = false) {
+    let existingBlocks = [];
+
+    // Parse existing blocks
+    try {
+        existingBlocks = JSON.parse(existingJSON);
+        if (!Array.isArray(existingBlocks)) {
+            existingBlocks = [];
+        }
+    } catch (e) {
+        existingBlocks = [];
+    }
+
+    // Parse new blocks from text
+    let newBlocks = [];
+    try {
+        newBlocks = JSON.parse(textToBlockNoteJSON(newText, url, isArabic));
+    } catch (e) {
+        newBlocks = [{ type: 'paragraph', content: [{ type: 'text', text: newText, styles: {} }] }];
+    }
+
+    // Combine blocks
+    return JSON.stringify([...existingBlocks, ...newBlocks]);
+}
+
 // POST clip a note (quick capture from browsing)
 router.post('/clip', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
-    const { body, noteId, section } = req.body;
+    const { body, noteId, section, url, isArabic } = req.body;
 
     if (!body) {
         return res.status(400).send('Bad Request: body is required');
@@ -139,20 +211,22 @@ router.post('/clip', authenticateToken(['user', 'editor', 'member', 'admin']), a
                 const existingSection = note.sections.find(s => s.title === section);
 
                 if (existingSection) {
-                    // Append to existing section
-                    existingSection.notes += (existingSection.notes ? '\n\n' : '') + body;
+                    // Append to existing section (BlockNote JSON format) with URL reference and Arabic styling
+                    existingSection.notes = appendToBlockNoteJSON(existingSection.notes, body, url, isArabic);
                 } else {
-                    // Create new section
-                    note.sections.push({ title: section, notes: body });
+                    // Create new section with BlockNote JSON format, URL reference, and Arabic styling
+                    note.sections.push({ title: section, notes: textToBlockNoteJSON(body, url, isArabic) });
                 }
             } else {
                 // No section specified, add to a "Clips" section or create one
                 const clipsSection = note.sections.find(s => s.title === 'Clips');
 
                 if (clipsSection) {
-                    clipsSection.notes += (clipsSection.notes ? '\n\n' : '') + body;
+                    // Append to existing Clips section (BlockNote JSON format) with URL reference and Arabic styling
+                    clipsSection.notes = appendToBlockNoteJSON(clipsSection.notes, body, url, isArabic);
                 } else {
-                    note.sections.push({ title: 'Clips', notes: body });
+                    // Create new Clips section with BlockNote JSON format, URL reference, and Arabic styling
+                    note.sections.push({ title: 'Clips', notes: textToBlockNoteJSON(body, url, isArabic) });
                 }
             }
 

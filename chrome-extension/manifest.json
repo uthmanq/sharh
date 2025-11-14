@@ -5,7 +5,8 @@
   "description": "Clip text from any webpage directly to your Sharh notes",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "identity"
   ],
   "host_permissions": [
     "https://sharhapp.com/*",
