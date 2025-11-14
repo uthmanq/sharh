@@ -112,6 +112,67 @@ router.get('/:noteId', authenticateToken(['user', 'editor', 'member', 'admin']),
     }
 });
 
+// POST clip a note (quick capture from browsing)
+router.post('/clip', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
+    const { body, noteId, section } = req.body;
+
+    if (!body) {
+        return res.status(400).send('Bad Request: body is required');
+    }
+
+    try {
+        // If noteId is provided, add to existing note
+        if (noteId) {
+            const note = await Note.findById(noteId);
+
+            if (!note) {
+                return res.status(404).send('Not Found: No note with the given ID exists');
+            }
+
+            // Verify ownership
+            if (!note.owner.equals(req.user._id)) {
+                return res.status(403).send('Forbidden: You do not have permission to modify this note');
+            }
+
+            // If section title is provided, try to find existing section or create new one
+            if (section) {
+                const existingSection = note.sections.find(s => s.title === section);
+
+                if (existingSection) {
+                    // Append to existing section
+                    existingSection.notes += (existingSection.notes ? '\n\n' : '') + body;
+                } else {
+                    // Create new section
+                    note.sections.push({ title: section, notes: body });
+                }
+            } else {
+                // No section specified, add to a "Clips" section or create one
+                const clipsSection = note.sections.find(s => s.title === 'Clips');
+
+                if (clipsSection) {
+                    clipsSection.notes += (clipsSection.notes ? '\n\n' : '') + body;
+                } else {
+                    note.sections.push({ title: 'Clips', notes: body });
+                }
+            }
+
+            const updatedNote = await note.save();
+
+            return res.status(200).json({
+                message: 'Clip added successfully',
+                noteId: updatedNote._id,
+                noteTitle: updatedNote.title
+            });
+        } else {
+            // No noteId provided, return error asking for noteId
+            return res.status(400).send('Bad Request: noteId is required for clipping');
+        }
+    } catch (err) {
+        console.error('Error clipping note:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 // POST create a new note
 router.post('/', authenticateToken(['user', 'editor', 'member', 'admin']), async (req, res) => {
     const { title, folderId, sections } = req.body;

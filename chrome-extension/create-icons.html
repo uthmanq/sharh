@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Placeholder Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        h1 {
+            color: #333;
+        }
+        .instructions {
+            background: #e7f3ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+        }
+        .icon-preview {
+            display: inline-block;
+            margin: 10px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sharh Icon Generator</h1>
+        <div class="instructions">
+            <p><strong>Instructions:</strong></p>
+            <p>1. Click the buttons below to download placeholder icons</p>
+            <p>2. Save them to the <code>chrome-extension/icons/</code> folder</p>
+            <p>3. Replace these with custom icons later if desired</p>
+        </div>
+
+        <div class="icon-preview">
+            <p>16x16:</p>
+            <canvas id="icon16" width="16" height="16"></canvas>
+            <br>
+            <button onclick="downloadIcon('icon16', 16)">Download icon16.png</button>
+        </div>
+
+        <div class="icon-preview">
+            <p>48x48:</p>
+            <canvas id="icon48" width="48" height="48"></canvas>
+            <br>
+            <button onclick="downloadIcon('icon48', 48)">Download icon48.png</button>
+        </div>
+
+        <div class="icon-preview">
+            <p>128x128:</p>
+            <canvas id="icon128" width="128" height="128"></canvas>
+            <br>
+            <button onclick="downloadIcon('icon128', 128)">Download icon128.png</button>
+        </div>
+    </div>
+
+    <script>
+        // Create simple placeholder icons
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#007bff';
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw a simple book/note icon
+            ctx.fillStyle = '#ffffff';
+
+            // Simple note paper shape
+            const padding = size * 0.2;
+            const width = size - (padding * 2);
+            const height = size - (padding * 2);
+
+            ctx.fillRect(padding, padding, width, height);
+
+            // Add some lines to make it look like notes
+            ctx.strokeStyle = '#007bff';
+            ctx.lineWidth = Math.max(1, size / 32);
+
+            const lineStart = padding + (width * 0.15);
+            const lineEnd = padding + (width * 0.85);
+            const lineSpacing = height / 5;
+
+            for (let i = 1; i <= 3; i++) {
+                const y = padding + (lineSpacing * i);
+                ctx.beginPath();
+                ctx.moveTo(lineStart, y);
+                ctx.lineTo(lineEnd, y);
+                ctx.stroke();
+            }
+        }
+
+        // Download icon
+        function downloadIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Generate all icons on load
+        window.onload = () => {
+            createIcon('icon16', 16);
+            createIcon('icon48', 48);
+            createIcon('icon128', 128);
+        };
+    </script>
+</body>
+</html>
