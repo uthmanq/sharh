@@ -430,9 +430,15 @@ router.post('/reset-password', async (req, res) => {
 
 // Initiate Google OAuth
 router.get('/auth/google',
-    passport.authenticate('google', {
-        scope: ['profile', 'email']
-    })
+    (req, res, next) => {
+        // Store the redirect URL from query param in the state object
+        const redirectTo = req.query.redirect || '/';
+
+        passport.authenticate('google', {
+            scope: ['profile', 'email'],
+            state: { redirectTo }  // Pass state as object (requires store: true in strategy)
+        })(req, res, next);
+    }
 );
 
 // Google OAuth callback
@@ -458,10 +464,15 @@ router.get('/auth/google/callback',
                 profilePicture: req.user.profilePicture
             };
 
-            // Redirect to frontend with token
-            // For development, you might want to redirect to localhost:3000
+            // Extract redirect URL from state (stored via req.authInfo when store: true is set)
+            let redirectTo = '/';
+            if (req.authInfo && req.authInfo.state && req.authInfo.state.redirectTo) {
+                redirectTo = req.authInfo.state.redirectTo;
+            }
+
+            // Redirect to frontend with token and redirect path
             const frontendURL = process.env.FRONTEND_URL || 'https://sharhapp.com';
-            res.redirect(`${frontendURL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+            res.redirect(`${frontendURL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}&redirect=${encodeURIComponent(redirectTo)}`);
         } catch (err) {
             console.error('Error in OAuth callback:', err);
             const frontendURL = process.env.FRONTEND_URL || 'https://sharhapp.com';
