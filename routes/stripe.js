@@ -4,6 +4,7 @@ require('dotenv').config();
 const stripeConfig = require('../config/stripeConfig')
 const stripe = require('stripe')(stripeConfig.secretKey);
 const authenticateToken = require('../middleware/authenticate');
+const User = require('../models/User');
 const router = express.Router();
 
 
@@ -303,7 +304,7 @@ router.get('/billing-history', authenticateToken(['member', 'editor', 'admin']),
       customer: req.user.stripeCustomerId,
       limit: 10
     });
-    
+
     res.json({
       invoices: invoices.data.map(invoice => ({
         id: invoice.id,
@@ -319,6 +320,89 @@ router.get('/billing-history', authenticateToken(['member', 'editor', 'admin']),
   } catch (error) {
     console.error('Error retrieving billing history:', error);
     res.status(500).send('Failed to retrieve billing history');
+  }
+});
+
+// Get all subscriptions with user data (admin only)
+router.get('/subscriptions/all-with-users', authenticateToken(['admin']), async (req, res) => {
+  try {
+    // Fetch all users from the database
+    const users = await User.find({}, 'username email stripeCustomerId').lean();
+
+    // Create a map of stripeCustomerId to user data for quick lookup
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.stripeCustomerId] = {
+        userId: user._id,
+        username: user.username,
+        email: user.email
+      };
+    });
+
+    // Fetch all subscriptions from Stripe with pagination
+    let hasMore = true;
+    let startingAfter = null;
+    const allSubscriptions = [];
+    const limit = 100; // Maximum allowed by Stripe API per request
+
+    while (hasMore) {
+      const queryParams = {
+        limit: limit,
+        status: 'all', // Get all subscription statuses
+        expand: ['data.default_payment_method', 'data.items.data.price']
+      };
+
+      if (startingAfter) {
+        queryParams.starting_after = startingAfter;
+      }
+
+      const subscriptionsPage = await stripe.subscriptions.list(queryParams);
+      allSubscriptions.push(...subscriptionsPage.data);
+
+      hasMore = subscriptionsPage.has_more;
+
+      if (hasMore && subscriptionsPage.data.length > 0) {
+        startingAfter = subscriptionsPage.data[subscriptionsPage.data.length - 1].id;
+      }
+    }
+
+    // Map subscriptions to include user data
+    const subscriptionsWithUsers = allSubscriptions.map(subscription => {
+      const userData = userMap[subscription.customer] || null;
+
+      return {
+        subscription_id: subscription.id,
+        status: subscription.status,
+        created: new Date(subscription.created * 1000),
+        current_period_start: new Date(subscription.current_period_start * 1000),
+        current_period_end: new Date(subscription.current_period_end * 1000),
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        stripe_customer_id: subscription.customer,
+        plan: subscription.items.data[0] ? {
+          id: subscription.items.data[0].price.id,
+          name: subscription.items.data[0].price.nickname || 'Standard Plan',
+          amount: subscription.items.data[0].price.unit_amount / 100,
+          currency: subscription.items.data[0].price.currency,
+          interval: subscription.items.data[0].price.recurring?.interval
+        } : null,
+        user: userData,
+        metadata: subscription.metadata
+      };
+    });
+
+    // Sort by creation date (newest first)
+    subscriptionsWithUsers.sort((a, b) => b.created - a.created);
+
+    res.json({
+      success: true,
+      total_subscriptions: subscriptionsWithUsers.length,
+      active_subscriptions: subscriptionsWithUsers.filter(s => s.status === 'active').length,
+      subscriptions: subscriptionsWithUsers
+    });
+  } catch (error) {
+    console.error('Error fetching all subscriptions with users:', error);
+    res.status(500).send('Failed to retrieve subscriptions with user data');
   }
 });
 

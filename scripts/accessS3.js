@@ -7,13 +7,16 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION, // Make sure your region is set in .env
 });
 
+// Default bucket name for backwards compatibility
+const DEFAULT_BUCKET = 'sharh-app-pdfs';
+
 // Function to upload a file to S3
-const uploadFile = async (filePath, s3Key) => {
+const uploadFile = async (filePath, s3Key, bucket = DEFAULT_BUCKET) => {
   try {
     const fileContent = fs.readFileSync(filePath);
 
     const params = {
-      Bucket: 'sharh-app-pdfs', // Your bucket name
+      Bucket: bucket,
       Key: s3Key, // The key (file name with path) in the S3 bucket
       Body: fileContent,
     };
@@ -28,10 +31,10 @@ const uploadFile = async (filePath, s3Key) => {
 };
 
 // Function to download a file from S3
-const downloadFile = async (s3Key, downloadPath) => {
+const downloadFile = async (s3Key, downloadPath, bucket = DEFAULT_BUCKET) => {
   try {
     const params = {
-      Bucket: 'sharh-app-pdfs', // Your bucket name
+      Bucket: bucket,
       Key: s3Key, // The key (file name with path) in the S3 bucket
     };
 
@@ -46,9 +49,9 @@ const downloadFile = async (s3Key, downloadPath) => {
 };
 
 // Function to download a file from S3 as a stream (for piping directly to response)
-const getFileStream = (s3Key) => {
+const getFileStream = (s3Key, bucket = DEFAULT_BUCKET) => {
     const params = {
-      Bucket: 'sharh-app-pdfs', // Your bucket name
+      Bucket: bucket,
       Key: s3Key, // The S3 key (file path)
     };
     return s3.getObject(params).createReadStream(); // Return the S3 file stream
@@ -56,9 +59,9 @@ const getFileStream = (s3Key) => {
   
 
 // Function to list all objects in the S3 bucket
-const listFiles = async () => {
+const listFiles = async (bucket = DEFAULT_BUCKET) => {
   const params = {
-    Bucket: 'sharh-app-pdfs', // Your bucket name
+    Bucket: bucket,
   };
 
   try {
@@ -72,10 +75,10 @@ const listFiles = async () => {
 };
 
 // Function to delete a file from S3
-const deleteFile = async (s3Key) => {
+const deleteFile = async (s3Key, bucket = DEFAULT_BUCKET) => {
   try {
     const params = {
-      Bucket: 'sharh-app-pdfs', // Your bucket name
+      Bucket: bucket,
       Key: s3Key, // The key (file name with path) in the S3 bucket
     };
 
@@ -91,17 +94,16 @@ const deleteFile = async (s3Key) => {
 
 
 // Function to get a pre-signed URL for viewing the file
-const getPresignedUrl = async (s3Key, expiresIn = 60) => {
+const getPresignedUrl = async (s3Key, expiresIn = 60, bucket = DEFAULT_BUCKET) => {
     try {
       const params = {
-        Bucket: 'sharh-app-pdfs', // Your bucket name
+        Bucket: bucket,
         Key: s3Key, // The key (file name with path) in the S3 bucket
         Expires: expiresIn, // Expiration time in seconds (default is 60)
         ResponseContentDisposition: 'inline' // Makes the file viewable in the browser
       };
-  
+
       const url = await s3.getSignedUrlPromise('getObject', params);
-      console.log('Generated pre-signed URL:', url);
       return url;
     } catch (err) {
       console.error('Error generating pre-signed URL:', err.message);

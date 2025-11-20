@@ -25,7 +25,8 @@ if (args.includes('--teststripe')) {
 }
 
 // Middleware
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' })); // Increased limit for OCR results with large text
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 const corsOptions = {
   origin: 'https://sharhapp.com',  // Replace with your frontend domain
@@ -74,6 +75,7 @@ const folderRoutes = require('./routes/folders');
 const noteRoutes = require('./routes/notes');
 const cardRoutes = require('./routes/cards');
 const cardCollectionRoutes = require('./routes/cardCollections');
+const ocrRoutes = require('./routes/ocr');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -88,13 +90,21 @@ app.use('/folders', folderRoutes);
 app.use('/notes', noteRoutes);
 app.use('/cards', cardRoutes);
 app.use('/card-collections', cardCollectionRoutes);
+app.use('/ocr', ocrRoutes);
 
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
   if (err instanceof URIError) {
+    console.error('URIError:', err.message);
     res.status(400).send('Bad Request: Malformed URL');
   } else {
+    console.error('Error handling middleware caught error:');
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
+    console.error('Request URL:', req.url);
+    console.error('Request method:', req.method);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
     res.status(500).send('Internal Server Error (MWE)');
   }
 });
