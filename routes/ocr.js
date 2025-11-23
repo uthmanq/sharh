@@ -571,6 +571,11 @@ router.get('/jobs', authenticateToken(['member', 'admin']), async (req, res) => 
 router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) => {
   try {
     const { bookTextId } = req.params;
+    const {
+      pageLimit = 50,
+      pageOffset = 0,
+      includeText = 'true'
+    } = req.query;
 
     const bookText = await BookText.findById(bookTextId)
       .populate('fileId', 'fileName author fileType fileSize s3Key visibility')
@@ -589,32 +594,47 @@ router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) =
       return res.status(403).json({ message: 'Unauthorized to view this book' });
     }
 
-    // If text is stored in S3, retrieve it
-    let fullText = bookText.extractedText;
-    if (bookText.metadata?.textS3Key) {
-      try {
-        const textStream = s3Service.getFileStream(bookText.metadata.textS3Key);
-        const chunks = [];
+    // If text is stored in S3, retrieve it (optional based on query param)
+    let fullText = null;
+    const shouldIncludeText = includeText === 'true';
 
-        for await (const chunk of textStream) {
-          chunks.push(chunk);
+    if (shouldIncludeText) {
+      fullText = bookText.extractedText;
+      if (bookText.metadata?.textS3Key) {
+        try {
+          const textStream = s3Service.getFileStream(bookText.metadata.textS3Key);
+          const chunks = [];
+
+          for await (const chunk of textStream) {
+            chunks.push(chunk);
+          }
+
+          fullText = Buffer.concat(chunks).toString('utf8');
+        } catch (s3Error) {
+          console.error('Error retrieving text from S3:', s3Error);
+          return res.status(500).json({
+            message: 'Error retrieving full text from storage',
+            error: s3Error.message
+          });
         }
-
-        fullText = Buffer.concat(chunks).toString('utf8');
-      } catch (s3Error) {
-        console.error('Error retrieving text from S3:', s3Error);
-        return res.status(500).json({
-          message: 'Error retrieving full text from storage',
-          error: s3Error.message
-        });
       }
     }
 
-    // Sort pages by pageNumber and generate presigned URLs for page images
+    // Sort pages by pageNumber
     const sortedPages = (bookText.pages || []).sort((a, b) => a.pageNumber - b.pageNumber);
 
+    // Apply pagination to pages
+    const limit = parseInt(pageLimit);
+    const offset = parseInt(pageOffset);
+    const totalPages = sortedPages.length;
+
+    // Return empty array if offset exceeds total pages
+    const paginatedPages = offset >= totalPages ? [] : sortedPages.slice(offset, offset + limit);
+    const hasMore = (offset + limit) < totalPages;
+
+    // Generate presigned URLs for paginated pages
     const pagesWithUrls = await Promise.all(
-      sortedPages.map(async (page) => {
+      paginatedPages.map(async (page) => {
         let imageUrl = null;
         if (page.s3Key) {
           try {
@@ -649,9 +669,13 @@ router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) =
         userId: bookText.userId._id,
         username: bookText.userId.username,
         userEmail: bookText.userId.email,
-        extractedText: fullText,
+        extractedText: shouldIncludeText ? fullText : undefined,
         language: bookText.language,
         pageCount: bookText.pageCount,
+        totalPages: totalPages,
+        pageLimit: limit,
+        pageOffset: offset,
+        hasMore: hasMore,
         pages: pagesWithUrls,
         status: bookText.status,
         error: bookText.error,
