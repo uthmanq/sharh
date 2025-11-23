@@ -32,11 +32,20 @@ const BookTextSchema = new Schema({
   pages: [{
     pageNumber: Number,
     text: String,
-    s3Key: String
+    s3Key: String,
+    isAIGenerated: {
+      type: Boolean,
+      default: true
+    }
   }],
   metadata: {
     type: Object,
     default: {}
+  },
+  visibility: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'private'
   },
   status: {
     type: String,

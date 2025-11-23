@@ -26,4 +26,29 @@ function authenticateToken(requiredRoles = ['member']) {
     };
 }
 
+// Optional authentication - doesn't fail if no token provided
+function optionalAuthenticateToken() {
+    return async (req, res, next) => {
+        const token = req.header('Authorization')?.split(' ')[1];
+
+        if (!token) {
+            req.user = null; // No user authenticated
+            return next();
+        }
+
+        jwt.verify(token, SECRET_KEY, async (err, user) => {
+            if (err) {
+                req.user = null; // Invalid token, treat as unauthenticated
+                return next();
+            }
+
+            // Fetch the user from the database
+            const foundUser = await User.findById(user.id);
+            req.user = foundUser || null;
+            next();
+        });
+    };
+}
+
 module.exports = authenticateToken;
+module.exports.optionalAuthenticateToken = optionalAuthenticateToken;

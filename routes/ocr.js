@@ -3,6 +3,7 @@ const router = express.Router();
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 const multer = require('multer');
 const authenticateToken = require('../middleware/authenticate');
+const { optionalAuthenticateToken } = require('../middleware/authenticate');
 const s3Service = require('../scripts/accessS3');
 const File = require('../models/File');
 const BookText = require('../models/BookText');
@@ -567,20 +568,24 @@ router.get('/jobs', authenticateToken(['member', 'admin']), async (req, res) => 
 });
 
 // Route to get a specific book by bookTextId including its full text
-router.get('/books/:bookTextId', authenticateToken(['member', 'admin']), async (req, res) => {
+router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) => {
   try {
     const { bookTextId } = req.params;
 
     const bookText = await BookText.findById(bookTextId)
-      .populate('fileId', 'fileName author fileType fileSize s3Key')
+      .populate('fileId', 'fileName author fileType fileSize s3Key visibility')
       .populate('userId', 'username email');
 
     if (!bookText) {
       return res.status(404).json({ message: 'Book not found' });
     }
 
-    // Check authorization
-    if (bookText.userId._id.toString() !== req.user.id && !req.user.roles.includes('admin')) {
+    // Check authorization based on visibility
+    const isPublic = bookText.visibility === 'public';
+    const isOwner = req.user && bookText.userId._id.toString() === req.user.id;
+    const isAdmin = req.user && req.user.roles.includes('admin');
+
+    if (!isPublic && !isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Unauthorized to view this book' });
     }
 
@@ -624,7 +629,8 @@ router.get('/books/:bookTextId', authenticateToken(['member', 'admin']), async (
           pageNumber: page.pageNumber,
           text: page.text,
           s3Key: page.s3Key,
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          isAIGenerated: page.isAIGenerated !== undefined ? page.isAIGenerated : true
         };
       })
     );
@@ -653,7 +659,8 @@ router.get('/books/:bookTextId', authenticateToken(['member', 'admin']), async (
         metadata: bookText.metadata,
         createdAt: bookText.createdAt,
         updatedAt: bookText.updatedAt,
-        completedAt: bookText.completedAt
+        completedAt: bookText.completedAt,
+        visibility: bookText.visibility
       }
     });
 
@@ -666,17 +673,142 @@ router.get('/books/:bookTextId', authenticateToken(['member', 'admin']), async (
   }
 });
 
-// Route to get all books with pagination (admins see all, members see only their own)
-router.get('/books', authenticateToken(['member', 'admin']), async (req, res) => {
+// Route to update a book's details (admins and owners only)
+router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async (req, res) => {
+  try {
+    const { bookTextId } = req.params;
+    const {
+      fileName,
+      author,
+      language,
+      extractedText,
+      pages,
+      visibility
+    } = req.body;
+
+    const bookText = await BookText.findById(bookTextId)
+      .populate('fileId', 'fileName author visibility');
+
+    if (!bookText) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+
+    // Check authorization - only owner or admin can update
+    const isOwner = bookText.userId.toString() === req.user.id;
+    const isAdmin = req.user.roles.includes('admin');
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized to update this book' });
+    }
+
+    // Update File fields (fileName, author)
+    if (bookText.fileId) {
+      const fileUpdates = {};
+      if (fileName !== undefined) fileUpdates.fileName = fileName;
+      if (author !== undefined) fileUpdates.author = author;
+
+      if (Object.keys(fileUpdates).length > 0) {
+        await File.findByIdAndUpdate(bookText.fileId._id, fileUpdates);
+      }
+    }
+
+    // Update BookText fields
+    if (language !== undefined) bookText.language = language;
+    if (extractedText !== undefined) bookText.extractedText = extractedText;
+    if (visibility !== undefined && ['public', 'private'].includes(visibility)) {
+      bookText.visibility = visibility;
+    }
+
+    // Update pages - can update individual pages or entire array
+    if (pages !== undefined) {
+      if (Array.isArray(pages)) {
+        // Replace entire pages array
+        bookText.pages = pages;
+      } else if (typeof pages === 'object') {
+        // Update specific pages by pageNumber
+        Object.keys(pages).forEach(pageNumber => {
+          const pageNum = parseInt(pageNumber);
+          const pageIndex = bookText.pages.findIndex(p => p.pageNumber === pageNum);
+
+          if (pageIndex >= 0) {
+            // Update existing page
+            if (pages[pageNumber].text !== undefined) {
+              bookText.pages[pageIndex].text = pages[pageNumber].text;
+            }
+            if (pages[pageNumber].s3Key !== undefined) {
+              bookText.pages[pageIndex].s3Key = pages[pageNumber].s3Key;
+            }
+            if (pages[pageNumber].isAIGenerated !== undefined) {
+              bookText.pages[pageIndex].isAIGenerated = pages[pageNumber].isAIGenerated;
+            }
+          } else {
+            // Add new page
+            bookText.pages.push({
+              pageNumber: pageNum,
+              text: pages[pageNumber].text || '',
+              s3Key: pages[pageNumber].s3Key || null,
+              isAIGenerated: pages[pageNumber].isAIGenerated !== undefined ? pages[pageNumber].isAIGenerated : true
+            });
+          }
+        });
+        // Sort pages after updates
+        bookText.pages.sort((a, b) => a.pageNumber - b.pageNumber);
+      }
+    }
+
+    await bookText.save();
+
+    // Fetch updated book with populated fields
+    const updatedBook = await BookText.findById(bookTextId)
+      .populate('fileId', 'fileName author fileType fileSize s3Key')
+      .populate('userId', 'username email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Book updated successfully',
+      book: {
+        bookTextId: updatedBook._id,
+        jobId: updatedBook.jobId,
+        fileId: updatedBook.fileId._id,
+        fileName: updatedBook.fileId.fileName,
+        author: updatedBook.fileId.author,
+        visibility: updatedBook.visibility,
+        language: updatedBook.language,
+        pageCount: updatedBook.pageCount,
+        status: updatedBook.status,
+        createdAt: updatedBook.createdAt,
+        updatedAt: updatedBook.updatedAt
+      }
+    });
+
+  } catch (err) {
+    console.error('Error updating book:', err);
+    res.status(500).json({
+      message: 'Error updating book',
+      error: err.message
+    });
+  }
+});
+
+// Route to get all books with pagination (admins see all, members see their own, public users see public books)
+router.get('/books', optionalAuthenticateToken(), async (req, res) => {
   try {
     const { status, language, limit = 20, offset = 0 } = req.query;
 
     // Build filter based on user role
     const filter = {};
 
-    // Non-admins can only see their own books
-    if (!req.user.roles.includes('admin')) {
-      filter.userId = req.user.id;
+    if (req.user) {
+      // Authenticated user
+      if (req.user.roles.includes('admin')) {
+        // Admins see all books
+      } else {
+        // Members see their own books
+        filter.userId = req.user.id;
+      }
+    } else {
+      // Unauthenticated users see only public books
+      filter.visibility = 'public';
     }
 
     // Optional filters
@@ -719,6 +851,7 @@ router.get('/books', authenticateToken(['member', 'admin']), async (req, res) =>
         error: book.error,
         processingTime: book.processingTime,
         metadata: book.metadata,
+        visibility: book.visibility,
         hasFullText: book.metadata?.textS3Key ? true : false,
         createdAt: book.createdAt,
         updatedAt: book.updatedAt,
