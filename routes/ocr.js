@@ -45,7 +45,7 @@ const upload = multer({
 
 
 // Route for worker to submit incremental page updates during OCR processing
-router.post('/result/page', authenticateToken(['admin']), async (req, res) => {
+router.post('/result/page', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const {
       jobId,
@@ -186,7 +186,7 @@ router.post('/result/page', authenticateToken(['admin']), async (req, res) => {
 });
 
 // Route for worker to submit extracted text after OCR processing is complete
-router.post('/result', authenticateToken(['admin']), async (req, res) => {
+router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const {
       jobId,
@@ -425,8 +425,9 @@ router.get('/status/:jobId', authenticateToken(['member', 'admin']), async (req,
       return res.status(404).json({ message: 'OCR job not found' });
     }
 
-    // Check authorization - user can only view their own jobs unless admin
-    if (bookText.userId.toString() !== req.user.id && !req.user.roles.includes('admin')) {
+    // Check authorization - user can only view their own jobs unless admin or editor
+    const isAdminOrEditor = req.user.roles.includes('admin') || req.user.roles.includes('editor');
+    if (bookText.userId.toString() !== req.user.id && !isAdminOrEditor) {
       return res.status(403).json({ message: 'Unauthorized to view this job' });
     }
 
@@ -470,7 +471,8 @@ router.get('/text/:jobId', authenticateToken(['member', 'admin']), async (req, r
     }
 
     // Check authorization
-    if (bookText.userId.toString() !== req.user.id && !req.user.roles.includes('admin')) {
+    const isAdminOrEditor = req.user.roles.includes('admin') || req.user.roles.includes('editor');
+    if (bookText.userId.toString() !== req.user.id && !isAdminOrEditor) {
       return res.status(403).json({ message: 'Unauthorized to view this text' });
     }
 
@@ -588,7 +590,7 @@ router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) =
     // Check authorization based on visibility
     const isPublic = bookText.visibility === 'public';
     const isOwner = req.user && bookText.userId._id.toString() === req.user.id;
-    const isAdmin = req.user && req.user.roles.includes('admin');
+    const isAdmin = req.user && (req.user.roles.includes('admin') || req.user.roles.includes('editor'));
 
     if (!isPublic && !isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Unauthorized to view this book' });
@@ -717,9 +719,9 @@ router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async
       return res.status(404).json({ message: 'Book not found' });
     }
 
-    // Check authorization - only owner or admin can update
+    // Check authorization - only owner, admin, or editor can update
     const isOwner = bookText.userId.toString() === req.user.id;
-    const isAdmin = req.user.roles.includes('admin');
+    const isAdmin = req.user.roles.includes('admin') || req.user.roles.includes('editor');
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Unauthorized to update this book' });
@@ -824,8 +826,8 @@ router.get('/books', optionalAuthenticateToken(), async (req, res) => {
 
     if (req.user) {
       // Authenticated user
-      if (req.user.roles.includes('admin')) {
-        // Admins see all books
+      if (req.user.roles.includes('admin') || req.user.roles.includes('editor')) {
+        // Admins and editors see all books
       } else {
         // Members see their own books
         filter.userId = req.user.id;

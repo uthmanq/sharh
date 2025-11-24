@@ -31,7 +31,7 @@ router.get('/fields', (req, res) => {
   res.json({ fields: AVAILABLE_FIELDS });
 });
 
-  router.post('/:bookId/generate', authenticateToken(['admin']), async (req, res) => {
+  router.post('/:bookId/generate', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const { bookId } = req.params;
     const { voice = 'alloy' } = req.body;
@@ -82,7 +82,7 @@ router.get('/fields', (req, res) => {
   }
 });
 
-router.get('/jobs/:jobId', authenticateToken(['admin']), async (req, res) => {
+router.get('/jobs/:jobId', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const job = await AudioJob.findById(req.params.jobId);
     if (!job) return res.status(404).json({ error: 'Job not found' });
@@ -200,7 +200,7 @@ router.get('/:bookId/lines-with-audio', async (req, res) => {
 });
 
 
-router.get('/jobs', authenticateToken(['admin']), async (req, res) => {
+router.get('/jobs', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const jobs = await AudioJob.find()
       .sort({ createdAt: -1 })
@@ -481,7 +481,7 @@ router.get('/:bookId/lines/:lineId', async (req, res) => {
 });
 
 // Delete audio for a specific line field
-router.delete('/:bookId/lines/:lineId/:field', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+router.delete('/:bookId/lines/:lineId/:field', authenticateToken([ 'editor', 'admin',]), async (req, res) => {
   try {
     const { bookId, lineId, field } = req.params;
     const { voice } = req.query;
@@ -531,7 +531,7 @@ router.delete('/:bookId/lines/:lineId/:field', authenticateToken(['member', 'edi
 });
 
 // Delete all audio for a line
-router.delete('/:bookId/lines/:lineId', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+router.delete('/:bookId/lines/:lineId', authenticateToken(['editor', 'admin']), async (req, res) => {
   try {
     const { bookId, lineId } = req.params;
 
@@ -564,7 +564,7 @@ router.delete('/:bookId/lines/:lineId', authenticateToken(['member', 'editor', '
 });
 
 // Delete all audio for a book
-router.delete('/:bookId', authenticateToken(['admin']), async (req, res) => {
+router.delete('/:bookId', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const { bookId } = req.params;
 

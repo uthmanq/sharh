@@ -9,7 +9,7 @@ const authenticateToken = require('../middleware/authenticate');
 
 // POST /generate/:bookId
 // Generate a new quiz for the provided bookId (admin only)
-router.post('/generate/:bookId', authenticateToken(['admin']), async (req, res) => {
+router.post('/generate/:bookId', authenticateToken(['admin', 'editor']), async (req, res) => {
     const { bookId } = req.params;
     
     if (!bookId) {
@@ -144,7 +144,7 @@ router.get('/:quizId', async (req, res) => {
 
 // PUT /:quizId/questions/:questionIndex
 // Edit a specific question in a quiz (admin only)
-router.put('/:quizId/questions/:questionIndex', authenticateToken(['admin']), async (req, res) => {
+router.put('/:quizId/questions/:questionIndex', authenticateToken(['admin', 'editor']), async (req, res) => {
     const { quizId, questionIndex } = req.params;
     const { questionText, options, rationale } = req.body;
     
@@ -212,7 +212,7 @@ router.put('/:quizId/questions/:questionIndex', authenticateToken(['admin']), as
 
 // POST /:quizId/questions
 // Add a new question to a quiz (admin only)
-router.post('/:quizId/questions', authenticateToken(['admin']), async (req, res) => {
+router.post('/:quizId/questions', authenticateToken(['admin', 'editor']), async (req, res) => {
     const { quizId } = req.params;
     const { questionText, options, rationale } = req.body;
     
@@ -278,7 +278,7 @@ router.post('/:quizId/questions', authenticateToken(['admin']), async (req, res)
 
 // DELETE /:quizId/questions/:questionIndex
 // Delete a specific question from a quiz (admin only)
-router.delete('/:quizId/questions/:questionIndex', authenticateToken(['admin']), async (req, res) => {
+router.delete('/:quizId/questions/:questionIndex', authenticateToken(['admin', 'editor']), async (req, res) => {
     const { quizId, questionIndex } = req.params;
     
     if (!quizId || questionIndex === undefined) {
@@ -323,7 +323,7 @@ router.delete('/:quizId/questions/:questionIndex', authenticateToken(['admin']),
 
 // DELETE /:quizId
 // Delete a specific quiz (admin only)
-router.delete('/:quizId', authenticateToken(['admin']), async (req, res) => {
+router.delete('/:quizId', authenticateToken(['admin', 'editor']), async (req, res) => {
     const { quizId } = req.params;
     
     if (!quizId) {

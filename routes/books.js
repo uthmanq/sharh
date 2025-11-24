@@ -287,7 +287,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.get('/adminbooks', authenticateToken(['admin']), async (req, res) => {
+router.get('/adminbooks', authenticateToken(['admin', 'editor']), async (req, res) => {
     try {
         // Build query based on filter parameters
         const query = { };
