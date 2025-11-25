@@ -327,19 +327,28 @@ router.post('/admin/email', authenticateToken(['admin']), async (req, res) => {
 
     try {
         // Call the sendEmail function and pass in the success and error callbacks
-        sendEmail(
+        const results = await sendIndividualEmails(
             recipients,
             subject,
             html,
-            (info) => {
-                // Success callback: send a success response to the client
-                return res.status(200).json({ message: 'Email sent successfully', messageId: info.messageId });
+            null,
+            null,
+            (info, recipient) => {
+                console.log(`Email sent to ${recipient}: ${info.messageId}`);
             },
-            (error) => {
-                // Error callback: send an error response to the client
-                return res.status(500).json({ error: 'Failed to send email', details: error.message });
+            (error, recipient) => {
+                console.error(`Failed to send email to ${recipient}:`, error);
             }
         );
+
+        const successCount = results.filter(result => result.status === 'fulfilled' && result.value?.success).length;
+        const failureCount = results.length - successCount;
+
+        return res.status(200).json({
+            message: 'Emails processed',
+            sent: successCount,
+            failed: failureCount
+        });
     } catch (err) {
         // Catch any unexpected errors and return a server error response
         return res.status(500).json({ error: 'Internal server error', details: err.message });
