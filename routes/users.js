@@ -431,14 +431,21 @@ router.post('/reset-password', async (req, res) => {
 // Initiate Google OAuth
 router.get('/auth/google',
     (req, res, next) => {
-        // Store the redirect URL from query param in the state object
         const redirectTo = req.query.redirect || '/';
         const source = req.query.source || 'web';
         const redirectUrl = req.query.redirectUrl || null; // Extension redirect URL
 
+        const statePayload = {
+            redirectTo,
+            source,
+            redirectUrl
+        };
+
+        const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
         passport.authenticate('google', {
             scope: ['profile', 'email'],
-            state: { redirectTo, source, redirectUrl }  // Pass state as object (requires store: true in strategy)
+            state
         })(req, res, next);
     }
 );
@@ -471,10 +478,16 @@ router.get('/auth/google/callback',
             let source = 'web';
             let redirectUrl = null;
 
-            if (req.authInfo && req.authInfo.state) {
-                redirectTo = req.authInfo.state.redirectTo || '/';
-                source = req.authInfo.state.source || 'web';
-                redirectUrl = req.authInfo.state.redirectUrl || null;
+            const stateParam = req.query.state;
+            if (stateParam) {
+                try {
+                    const decoded = JSON.parse(Buffer.from(stateParam, 'base64url').toString('utf8'));
+                    redirectTo = decoded.redirectTo || '/';
+                    source = decoded.source || 'web';
+                    redirectUrl = decoded.redirectUrl || null;
+                } catch (err) {
+                    console.warn('Failed to decode Google OAuth state', err);
+                }
             }
 
             // Check if this is from extension
