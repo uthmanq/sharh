@@ -7,6 +7,7 @@ const {
   indexBookDocument,
   indexBookTextDocument
 } = require('../services/ElasticService');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
