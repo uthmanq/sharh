@@ -12,6 +12,9 @@ const {
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
+console.log('Elasticsearch node:', process.env.ELASTICSEARCH_NODE);
+console.log('Elasticsearch skip verify:', process.env.ELASTICSEARCH_SKIP_VERIFY);
+
 if (!isEnabled()) {
   console.error('Elasticsearch is not enabled. Set ELASTICSEARCH_NODE before running this script.');
   process.exit(1);
