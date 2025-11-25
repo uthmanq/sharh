@@ -47,7 +47,7 @@ const BookTextSchema = new Schema({
       type: Boolean,
       default: true
     }
-  }],
+  }], // Deprecated: Pages now stored in BookTextPage collection. Kept for backward compatibility with old documents.
   metadata: {
     type: Object,
     default: {}

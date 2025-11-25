@@ -1,4 +1,5 @@
 const { Client } = require('@opensearch-project/opensearch');
+const BookTextPage = require('../models/BookTextPage');
 
 const BOOK_INDEX = process.env.ELASTICSEARCH_BOOK_INDEX || 'books';
 const BOOK_TEXT_INDEX = process.env.ELASTICSEARCH_BOOK_TEXT_INDEX || 'book_texts';
@@ -147,15 +148,33 @@ function buildBookDocument(book) {
   };
 }
 
-function buildBookTextDocument(bookText) {
+async function buildBookTextDocument(bookText) {
   const raw = normalizeDocument(bookText);
   if (!raw) {
     return null;
   }
 
-  const pagesText = Array.isArray(raw.pages)
-    ? raw.pages.map(page => page?.text).filter(Boolean).join('\n')
-    : '';
+  // Fetch pages from BookTextPage collection (new approach)
+  let pagesText = '';
+  try {
+    const pages = await BookTextPage.find({ bookTextId: raw._id })
+      .select('text')
+      .sort({ pageNumber: 1 })
+      .lean();
+
+    if (pages && pages.length > 0) {
+      pagesText = pages.map(page => page.text).filter(Boolean).join('\n');
+    } else if (Array.isArray(raw.pages)) {
+      // Fallback to old pages array for unmigrated documents
+      pagesText = raw.pages.map(page => page?.text).filter(Boolean).join('\n');
+    }
+  } catch (error) {
+    console.error('Error fetching pages for indexing:', error);
+    // Fallback to old pages array on error
+    if (Array.isArray(raw.pages)) {
+      pagesText = raw.pages.map(page => page?.text).filter(Boolean).join('\n');
+    }
+  }
 
   return {
     jobId: raw.jobId,
@@ -229,7 +248,7 @@ async function indexBookTextDocument(bookText) {
     return;
   }
 
-  const document = buildBookTextDocument(bookText);
+  const document = await buildBookTextDocument(bookText);
   if (!document) {
     return;
   }

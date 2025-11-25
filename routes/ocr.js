@@ -7,6 +7,7 @@ const { optionalAuthenticateToken } = require('../middleware/authenticate');
 const s3Service = require('../scripts/accessS3');
 const File = require('../models/File');
 const BookText = require('../models/BookText');
+const BookTextPage = require('../models/BookTextPage');
 const {
   searchBookTextsInIndex,
   isEnabled: isElasticSearchEnabled
@@ -86,7 +87,6 @@ router.post('/result/page', authenticateToken(['admin', 'editor']), async (req, 
         language: 'ar',
         status: 'processing',
         pageCount: pageCount || 0,
-        pages: [],
         metadata: { pageErrors: [] }
       });
 
@@ -94,55 +94,42 @@ router.post('/result/page', authenticateToken(['admin', 'editor']), async (req, 
       console.log(`Created BookText record for orphaned job during page update: ${jobId}`);
     }
 
-    // Prepare page data
-    const pageData = {
-      pageNumber: pageNumber,
-      text: text || '',
-      s3Key: s3Key || null
-    };
+    // Save or update page in BookTextPage collection
+    await BookTextPage.findOneAndUpdate(
+      {
+        bookTextId: bookText._id,
+        pageNumber: pageNumber
+      },
+      {
+        bookTextId: bookText._id,
+        jobId: jobId,
+        pageNumber: pageNumber,
+        text: text || '',
+        s3Key: s3Key || null,
+        updatedAt: new Date()
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    );
 
-    // Build update operations
+    // Update BookText metadata
     const updateOps = {
       $set: {
         updatedAt: new Date(),
         'metadata.pagesProcessed': pagesProcessed,
-        'metadata.lastPageUpdate': new Date().toISOString()
+        'metadata.lastPageUpdate': new Date().toISOString(),
+        status: 'processing' // Update status to processing if it's pending
       }
     };
 
-    // Update page count if provided and not already set
+    // Update page count if provided
     if (pageCount) {
       updateOps.$set.pageCount = pageCount;
     }
 
-    // Update status to processing if it's pending
-    updateOps.$set.status = 'processing';
-
-    // Use atomic operation to update or add the page
-    // First, try to update existing page with matching pageNumber
-    const result = await BookText.updateOne(
-      {
-        jobId: jobId,
-        'pages.pageNumber': pageNumber
-      },
-      {
-        $set: {
-          'pages.$': pageData,
-          ...updateOps.$set
-        }
-      }
-    );
-
-    // If no page was updated (page doesn't exist), push a new page
-    if (result.matchedCount === 0 || result.modifiedCount === 0) {
-      await BookText.updateOne(
-        { jobId: jobId },
-        {
-          $push: { pages: pageData },
-          $set: updateOps.$set
-        }
-      );
-    }
+    await BookText.updateOne({ jobId: jobId }, updateOps);
 
     // Handle page-level errors separately
     if (status === 'failed' && error) {
@@ -191,6 +178,10 @@ router.post('/result/page', authenticateToken(['admin', 'editor']), async (req, 
 });
 
 // Route for worker to submit extracted text after OCR processing is complete
+// Note: MongoDB has a 16MB document size limit, so for large documents we:
+// 1. Store extractedText in S3 (if >10KB) and keep only a 1000-char preview in MongoDB
+// 2. Store pages array WITHOUT text content to avoid exceeding document size limit
+// 3. Full text can be retrieved via GET /text/:jobId or GET /books/:bookTextId
 router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) => {
   try {
     const {
@@ -295,12 +286,40 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
 
     bookText.language = language || bookText.language;
     bookText.pageCount = pageCount || bookText.pageCount;
-    bookText.pages = pages || bookText.pages;
     bookText.status = status || bookText.status;
     bookText.error = error || bookText.error;
     bookText.processingTime = processingTime || bookText.processingTime;
 
     await bookText.save();
+
+    // Save pages to BookTextPage collection (avoids MongoDB 16MB document size limit)
+    if (pages && Array.isArray(pages)) {
+      const pageOperations = pages.map(page => ({
+        updateOne: {
+          filter: {
+            bookTextId: bookText._id,
+            pageNumber: page.pageNumber
+          },
+          update: {
+            $set: {
+              bookTextId: bookText._id,
+              jobId: jobId,
+              pageNumber: page.pageNumber,
+              text: page.text || '',
+              s3Key: page.s3Key || null,
+              isAIGenerated: page.isAIGenerated !== undefined ? page.isAIGenerated : true,
+              updatedAt: new Date()
+            }
+          },
+          upsert: true
+        }
+      }));
+
+      // Bulk write for better performance
+      if (pageOperations.length > 0) {
+        await BookTextPage.bulkWrite(pageOperations);
+      }
+    }
 
     res.status(201).json({
       message: 'OCR result saved successfully',
@@ -537,6 +556,18 @@ router.get('/text/:jobId', authenticateToken(['member', 'admin']), async (req, r
       }
     }
 
+    // Fetch pages from BookTextPage collection
+    let pages = await BookTextPage.find({ bookTextId: bookText._id })
+      .sort({ pageNumber: 1 })
+      .select('pageNumber text s3Key isAIGenerated')
+      .lean();
+
+    // Fallback: If no pages in BookTextPage collection, use old pages array format
+    if (pages.length === 0 && bookText.pages && bookText.pages.length > 0) {
+      console.log(`Using fallback pages array for book ${bookText._id}`);
+      pages = bookText.pages;
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -546,7 +577,7 @@ router.get('/text/:jobId', authenticateToken(['member', 'admin']), async (req, r
         extractedText: fullText,
         language: bookText.language,
         pageCount: bookText.pageCount,
-        pages: bookText.pages,
+        pages: pages,
         status: bookText.status,
         completedAt: bookText.completedAt
       }
@@ -693,14 +724,8 @@ const formatBookTextSearchResults = (books, query) => {
       });
     }
 
-    (book.pages || []).forEach(page => {
-      if (page.text && regex.test(page.text)) {
-        matches.push({
-          pageNumber: page.pageNumber,
-          excerpt: getBookTextExcerpt(page.text, query)
-        });
-      }
-    });
+    // Note: Pages are now in BookTextPage collection
+    // Page-level search would require a separate query to BookTextPage
 
     return {
       bookTextId: book._id,
@@ -782,11 +807,10 @@ router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
       }
     }
 
+    // Note: Pages are now in a separate BookTextPage collection
+    // Only search in extractedText field (which contains the full text)
     const baseQuery = {
-      $or: [
-        { extractedText: { $regex: q, $options: 'i' } },
-        { 'pages.text': { $regex: q, $options: 'i' } }
-      ]
+      extractedText: { $regex: q, $options: 'i' }
     };
 
     const finalQuery = mergeBookTextQuery(baseQuery, accessFilter);
@@ -870,16 +894,28 @@ router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) =
       }
     }
 
-    // Sort pages by pageNumber
-    const sortedPages = (bookText.pages || []).sort((a, b) => a.pageNumber - b.pageNumber);
-
-    // Apply pagination to pages
+    // Fetch pages from BookTextPage collection
     const limit = parseInt(pageLimit);
     const offset = parseInt(pageOffset);
-    const totalPages = sortedPages.length;
 
-    // Return empty array if offset exceeds total pages
-    const paginatedPages = offset >= totalPages ? [] : sortedPages.slice(offset, offset + limit);
+    // Get total page count
+    let totalPages = await BookTextPage.countDocuments({ bookTextId: bookText._id });
+
+    // Fetch paginated pages
+    let paginatedPages = await BookTextPage.find({ bookTextId: bookText._id })
+      .sort({ pageNumber: 1 })
+      .skip(offset)
+      .limit(limit)
+      .lean();
+
+    // Fallback: If no pages in BookTextPage collection, use old pages array format
+    if (totalPages === 0 && bookText.pages && bookText.pages.length > 0) {
+      console.log(`Using fallback pages array for book ${bookText._id}`);
+      const sortedPages = bookText.pages.sort((a, b) => a.pageNumber - b.pageNumber);
+      totalPages = sortedPages.length;
+      paginatedPages = offset >= totalPages ? [] : sortedPages.slice(offset, offset + limit);
+    }
+
     const hasMore = (offset + limit) < totalPages;
 
     // Generate presigned URLs for paginated pages
@@ -1009,40 +1045,59 @@ router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async
         : (typeof categories === 'string' ? categories.split(',').map(c => c.trim()).filter(Boolean) : []);
     }
 
-    // Update pages - can update individual pages or entire array
+    // Update pages in BookTextPage collection
     if (pages !== undefined) {
       if (Array.isArray(pages)) {
-        // Replace entire pages array
-        bookText.pages = pages;
+        // Replace entire pages array - use bulk operations
+        const pageOperations = pages.map(page => ({
+          updateOne: {
+            filter: {
+              bookTextId: bookText._id,
+              pageNumber: page.pageNumber
+            },
+            update: {
+              $set: {
+                bookTextId: bookText._id,
+                jobId: bookText.jobId,
+                pageNumber: page.pageNumber,
+                text: page.text || '',
+                s3Key: page.s3Key || null,
+                isAIGenerated: page.isAIGenerated !== undefined ? page.isAIGenerated : true,
+                updatedAt: new Date()
+              }
+            },
+            upsert: true
+          }
+        }));
+
+        if (pageOperations.length > 0) {
+          await BookTextPage.bulkWrite(pageOperations);
+        }
       } else if (typeof pages === 'object') {
         // Update specific pages by pageNumber
-        Object.keys(pages).forEach(pageNumber => {
+        const updatePromises = Object.keys(pages).map(async (pageNumber) => {
           const pageNum = parseInt(pageNumber);
-          const pageIndex = bookText.pages.findIndex(p => p.pageNumber === pageNum);
+          const pageUpdate = pages[pageNumber];
 
-          if (pageIndex >= 0) {
-            // Update existing page
-            if (pages[pageNumber].text !== undefined) {
-              bookText.pages[pageIndex].text = pages[pageNumber].text;
-            }
-            if (pages[pageNumber].s3Key !== undefined) {
-              bookText.pages[pageIndex].s3Key = pages[pageNumber].s3Key;
-            }
-            if (pages[pageNumber].isAIGenerated !== undefined) {
-              bookText.pages[pageIndex].isAIGenerated = pages[pageNumber].isAIGenerated;
-            }
-          } else {
-            // Add new page
-            bookText.pages.push({
-              pageNumber: pageNum,
-              text: pages[pageNumber].text || '',
-              s3Key: pages[pageNumber].s3Key || null,
-              isAIGenerated: pages[pageNumber].isAIGenerated !== undefined ? pages[pageNumber].isAIGenerated : true
-            });
-          }
+          const updateFields = {
+            bookTextId: bookText._id,
+            jobId: bookText.jobId,
+            pageNumber: pageNum,
+            updatedAt: new Date()
+          };
+
+          if (pageUpdate.text !== undefined) updateFields.text = pageUpdate.text;
+          if (pageUpdate.s3Key !== undefined) updateFields.s3Key = pageUpdate.s3Key;
+          if (pageUpdate.isAIGenerated !== undefined) updateFields.isAIGenerated = pageUpdate.isAIGenerated;
+
+          return BookTextPage.findOneAndUpdate(
+            { bookTextId: bookText._id, pageNumber: pageNum },
+            { $set: updateFields },
+            { upsert: true, new: true }
+          );
         });
-        // Sort pages after updates
-        bookText.pages.sort((a, b) => a.pageNumber - b.pageNumber);
+
+        await Promise.all(updatePromises);
       }
     }
 
