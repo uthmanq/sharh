@@ -23,7 +23,7 @@ function getClient() {
     const config = { node: elasticNode };
 
     if (skipVerify) {
-      config.ssl = {
+      config.tls = {
         rejectUnauthorized: false
       };
     }
