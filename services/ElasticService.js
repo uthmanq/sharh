@@ -192,7 +192,7 @@ async function indexBookDocument(book) {
     await es.index({
       index: BOOK_INDEX,
       id: book._id ? book._id.toString() : undefined,
-      document
+      body: document
     });
   } catch (error) {
     console.error('Failed to index book document', error);
@@ -239,7 +239,7 @@ async function indexBookTextDocument(bookText) {
     await es.index({
       index: BOOK_TEXT_INDEX,
       id: bookText._id ? bookText._id.toString() : undefined,
-      document
+      body: document
     });
   } catch (error) {
     console.error('Failed to index book text document', error);
