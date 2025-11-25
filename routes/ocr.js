@@ -7,12 +7,13 @@ const { optionalAuthenticateToken } = require('../middleware/authenticate');
 const s3Service = require('../scripts/accessS3');
 const File = require('../models/File');
 const BookText = require('../models/BookText');
-const { 
-  searchBookTextsInIndex, 
-  isEnabled: isElasticSearchEnabled 
+const {
+  searchBookTextsInIndex,
+  isEnabled: isElasticSearchEnabled
 } = require('../services/ElasticService');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const tmp = require('tmp-promise');
 require('dotenv').config();
 
@@ -236,15 +237,42 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
     if (extractedText && extractedText.length > 10000) { // Store in S3 if > 10KB
       textS3Key = `ocr-results/${jobId}.txt`;
 
-      // Write text to temporary file
+      // Write text to temporary file using streams to avoid buffer overflow
       const tmpFile = await tmp.file({ postfix: '.txt' });
-      await fs.writeFile(tmpFile.path, extractedText, 'utf8');
 
-      // Upload to S3
-      await s3Service.uploadFile(tmpFile.path, textS3Key);
+      try {
+        // For very large texts, write using streams to avoid buffer size limits
+        await new Promise((resolve, reject) => {
+          const writeStream = fsSync.createWriteStream(tmpFile.path, { encoding: 'utf8' });
 
-      // Clean up temp file
-      await tmpFile.cleanup();
+          writeStream.on('error', reject);
+          writeStream.on('finish', resolve);
+
+          // Write in chunks to avoid buffer overflow
+          const chunkSize = 1024 * 1024; // 1MB chunks
+          for (let i = 0; i < extractedText.length; i += chunkSize) {
+            const chunk = extractedText.substring(i, Math.min(i + chunkSize, extractedText.length));
+            writeStream.write(chunk);
+          }
+
+          writeStream.end();
+        });
+
+        // Upload to S3
+        await s3Service.uploadFile(tmpFile.path, textS3Key);
+
+        // Clean up temp file
+        await tmpFile.cleanup();
+      } catch (writeError) {
+        console.error('Error writing large text file:', writeError);
+        // Clean up on error
+        try {
+          await tmpFile.cleanup();
+        } catch (cleanupErr) {
+          console.error('Error cleaning up temp file:', cleanupErr);
+        }
+        throw writeError;
+      }
     }
 
     // Update BookText record
@@ -306,8 +334,13 @@ router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), 
       tags = '',
       categories = '',
       visibility = 'private',
+      customPrompt,
       jobMetadata
     } = req.body;
+
+    // Parse tags and categories into arrays
+    const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    const categoriesArray = categories ? categories.split(',').map(cat => cat.trim()).filter(Boolean) : [];
 
     // Generate a unique key for S3
     const uniqueKey = `ocr/${uuidv4()}-${file.originalname}`;
@@ -345,6 +378,7 @@ router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), 
       fileType: file.mimetype,
       fileSize: file.size,
       language: language,
+      customPrompt: customPrompt || null,
       metadata: jobMetadata ? JSON.parse(jobMetadata) : {},
       createdAt: new Date().toISOString()
     };
@@ -356,6 +390,8 @@ router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), 
       userId: req.user.id,
       extractedText: '',
       language: language,
+      tags: tagsArray,
+      categories: categoriesArray,
       status: 'pending',
       metadata: jobMetadata ? JSON.parse(jobMetadata) : {}
     });
@@ -555,6 +591,8 @@ router.get('/jobs', authenticateToken(['member', 'admin']), async (req, res) => 
         fileName: job.fileId.fileName,
         status: job.status,
         language: job.language,
+        tags: job.tags,
+        categories: job.categories,
         pageCount: job.pageCount,
         error: job.error,
         processingTime: job.processingTime,
@@ -673,6 +711,8 @@ const formatBookTextSearchResults = (books, query) => {
       userId: book.userId?._id,
       username: book.userId?.username,
       language: book.language,
+      tags: book.tags,
+      categories: book.categories,
       visibility: book.visibility,
       status: book.status,
       pageCount: book.pageCount,
@@ -881,6 +921,8 @@ router.get('/books/:bookTextId', optionalAuthenticateToken(), async (req, res) =
         userEmail: bookText.userId.email,
         extractedText: shouldIncludeText ? fullText : undefined,
         language: bookText.language,
+        tags: bookText.tags,
+        categories: bookText.categories,
         pageCount: bookText.pageCount,
         totalPages: totalPages,
         pageLimit: limit,
@@ -917,7 +959,9 @@ router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async
       language,
       extractedText,
       pages,
-      visibility
+      visibility,
+      tags,
+      categories
     } = req.body;
 
     const bookText = await BookText.findById(bookTextId)
@@ -951,6 +995,18 @@ router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async
     if (extractedText !== undefined) bookText.extractedText = extractedText;
     if (visibility !== undefined && ['public', 'private'].includes(visibility)) {
       bookText.visibility = visibility;
+    }
+
+    // Update tags and categories
+    if (tags !== undefined) {
+      bookText.tags = Array.isArray(tags)
+        ? tags
+        : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+    }
+    if (categories !== undefined) {
+      bookText.categories = Array.isArray(categories)
+        ? categories
+        : (typeof categories === 'string' ? categories.split(',').map(c => c.trim()).filter(Boolean) : []);
     }
 
     // Update pages - can update individual pages or entire array
@@ -1008,6 +1064,8 @@ router.patch('/books/:bookTextId', authenticateToken(['member', 'admin']), async
         author: updatedBook.fileId.author,
         visibility: updatedBook.visibility,
         language: updatedBook.language,
+        tags: updatedBook.tags,
+        categories: updatedBook.categories,
         pageCount: updatedBook.pageCount,
         status: updatedBook.status,
         createdAt: updatedBook.createdAt,
@@ -1081,6 +1139,8 @@ router.get('/books', optionalAuthenticateToken(), async (req, res) => {
         userEmail: book.userId?.email,
         status: book.status,
         language: book.language,
+        tags: book.tags,
+        categories: book.categories,
         pageCount: book.pageCount,
         error: book.error,
         processingTime: book.processingTime,

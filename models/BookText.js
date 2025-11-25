@@ -30,6 +30,12 @@ const BookTextSchema = new Schema({
     type: String,
     default: 'ar'
   },
+  tags: [{
+    type: String
+  }],
+  categories: [{
+    type: String
+  }],
   pageCount: {
     type: Number
   },
