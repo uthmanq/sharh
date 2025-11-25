@@ -1,4 +1,4 @@
-const { Client } = require('@elastic/elasticsearch');
+const { Client } = require('@opensearch-project/opensearch');
 
 const BOOK_INDEX = process.env.ELASTICSEARCH_BOOK_INDEX || 'books';
 const BOOK_TEXT_INDEX = process.env.ELASTICSEARCH_BOOK_TEXT_INDEX || 'book_texts';
@@ -23,7 +23,7 @@ function getClient() {
     const config = { node: elasticNode };
 
     if (skipVerify) {
-      config.tls = {
+      config.ssl = {
         rejectUnauthorized: false
       };
     }
