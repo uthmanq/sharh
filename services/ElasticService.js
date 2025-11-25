@@ -5,6 +5,7 @@ const BOOK_TEXT_INDEX = process.env.ELASTICSEARCH_BOOK_TEXT_INDEX || 'book_texts
 const elasticNode = process.env.ELASTICSEARCH_NODE;
 const elasticUsername = process.env.ELASTICSEARCH_USERNAME;
 const elasticPassword = process.env.ELASTICSEARCH_PASSWORD;
+const skipVerify = String(process.env.ELASTICSEARCH_SKIP_VERIFY || '').toLowerCase() === 'true';
 
 let client = null;
 let indicesEnsured = false;
@@ -20,6 +21,12 @@ function getClient() {
 
   if (!client) {
     const config = { node: elasticNode };
+
+    if (skipVerify) {
+      config.ssl = {
+        rejectUnauthorized: false
+      };
+    }
 
     if (elasticUsername && elasticPassword) {
       config.auth = {

@@ -18,6 +18,7 @@ Server side search now relies on Elasticsearch for indexing `Book` and `BookText
 - `ELASTICSEARCH_USERNAME` / `ELASTICSEARCH_PASSWORD` – optional basic auth credentials.
 - `ELASTICSEARCH_BOOK_INDEX` – optional override for the books index name (defaults to `books`).
 - `ELASTICSEARCH_BOOK_TEXT_INDEX` – optional override for the OCR/book text index name (defaults to `book_texts`).
+- `ELASTICSEARCH_SKIP_VERIFY` – set to `true` only when your cluster uses a self-signed TLS certificate and you cannot import the CA. This disables HTTPS certificate verification.
 
 Once configured, any updates to `Book` or `BookText` documents will be indexed automatically, and the `/books/search` plus `/ocr/books/search` routes will query Elasticsearch when available.
 
