@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt');
 const stripeConfig = require('../config/stripeConfig')
 const stripe = require('stripe')(stripeConfig.secretKey);
 const SECRET_KEY = process.env.SECRET_KEY;
-const { sendEmail } = require('../scripts/sendEmail');
+const { sendEmail, sendIndividualEmails } = require('../scripts/sendEmail');
 const passport = require('../config/passport');
 
 
