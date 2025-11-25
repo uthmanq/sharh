@@ -26,10 +26,7 @@ if (!MONGODB_URI) {
 }
 
 async function reindex() {
-  await mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
+  await mongoose.connect(MONGODB_URI);
 
   const books = await Book.find();
   const bookTexts = await BookText.find();

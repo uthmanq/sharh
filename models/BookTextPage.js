@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const { indexBookTextDocument } = require('../services/ElasticService');
 
 const BookTextPageSchema = new Schema({
   bookTextId: {
@@ -53,6 +52,8 @@ BookTextPageSchema.pre('save', function(next) {
 // Post-save middleware to re-index parent BookText in Elasticsearch
 BookTextPageSchema.post('save', async function(doc) {
   try {
+    // Lazy load to avoid circular dependency
+    const { indexBookTextDocument } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
@@ -67,6 +68,8 @@ BookTextPageSchema.post('save', async function(doc) {
 BookTextPageSchema.post('findOneAndUpdate', async function(doc) {
   try {
     if (!doc) return;
+    // Lazy load to avoid circular dependency
+    const { indexBookTextDocument } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
@@ -81,6 +84,8 @@ BookTextPageSchema.post('findOneAndUpdate', async function(doc) {
 BookTextPageSchema.post('findOneAndDelete', async function(doc) {
   try {
     if (!doc) return;
+    // Lazy load to avoid circular dependency
+    const { indexBookTextDocument } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
@@ -93,6 +98,8 @@ BookTextPageSchema.post('findOneAndDelete', async function(doc) {
 
 BookTextPageSchema.post('deleteOne', { document: true, query: false }, async function(doc) {
   try {
+    // Lazy load to avoid circular dependency
+    const { indexBookTextDocument } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
