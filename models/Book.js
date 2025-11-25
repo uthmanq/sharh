@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-
-// Assuming you have a User model in the same folder
-const User = require('./User'); 
+const { 
+    indexBookDocument, 
+    removeBookDocument 
+} = require('../services/ElasticService');
 
 const bookSchema = new mongoose.Schema({
     title: String,
@@ -64,6 +65,28 @@ const bookSchema = new mongoose.Schema({
 bookSchema.pre('save', function(next) {
     this.lastUpdated = Date.now();
     next();
+});
+
+bookSchema.post('save', function(doc) {
+    indexBookDocument(doc);
+});
+
+bookSchema.post('findOneAndUpdate', function(doc) {
+    if (doc) {
+        indexBookDocument(doc);
+    }
+});
+
+bookSchema.post('findOneAndDelete', function(doc) {
+    if (doc && doc._id) {
+        removeBookDocument(doc._id);
+    }
+});
+
+bookSchema.post('deleteOne', { document: true, query: false }, function(doc) {
+    if (doc && doc._id) {
+        removeBookDocument(doc._id);
+    }
 });
 
 const Book = mongoose.model('Book', bookSchema);

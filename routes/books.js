@@ -9,6 +9,10 @@ const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
 const User = require('../models/User'); // Ensure you have the User model imported
 const EditGuard = require('../middleware/editguard')
+const { 
+    searchBooksInIndex, 
+    isEnabled: isElasticEnabled 
+} = require('../services/ElasticService');
 // Configure AWS SDK for the new bucket
 // const s3 = new AWS.S3({
 //     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -35,6 +39,123 @@ const getExcerpt = (text, query, contextLength = 35) => {
     return text.slice(start, end).trim();
 };
 
+const isPrivilegedUser = (user) => {
+    if (!user || !Array.isArray(user.roles)) {
+        return false;
+    }
+
+    return user.roles.includes('admin') || user.roles.includes('editor');
+};
+
+const buildMongoAccessFilter = (user) => {
+    if (!user) {
+        return { visibility: 'public' };
+    }
+
+    if (isPrivilegedUser(user)) {
+        return {};
+    }
+
+    return {
+        $or: [
+            { visibility: 'public' },
+            { owner: user._id },
+            { contributors: user._id }
+        ]
+    };
+};
+
+const buildElasticAccessFilter = (user) => {
+    if (!user) {
+        return { visibility: 'public' };
+    }
+
+    if (isPrivilegedUser(user)) {
+        return {};
+    }
+
+    return {
+        allowedVisibilities: [
+            { type: 'visibility', value: 'public' },
+            { type: 'owner', value: user._id.toString() },
+            { type: 'contributor', value: user._id.toString() }
+        ]
+    };
+};
+
+const mergeWithAccessFilter = (baseQuery, accessFilter) => {
+    if (!accessFilter || Object.keys(accessFilter).length === 0) {
+        return baseQuery;
+    }
+
+    return {
+        $and: [
+            baseQuery,
+            accessFilter
+        ]
+    };
+};
+
+const buildSearchRegex = (query) => {
+    try {
+        return new RegExp(query, 'i');
+    } catch (err) {
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(escaped, 'i');
+    }
+};
+
+const formatBooks = (books, query) => {
+    const regex = buildSearchRegex(query);
+
+    return books.map(book => {
+        const matchingLines = (book.lines || []).filter(line => {
+            return (line.Arabic && regex.test(line.Arabic)) ||
+                (line.English && regex.test(line.English)) ||
+                (line.commentary && regex.test(line.commentary)) ||
+                (line.rootwords && regex.test(line.rootwords));
+        }).map(line => {
+            let excerpt = '';
+            if (line.Arabic && regex.test(line.Arabic)) {
+                excerpt = getExcerpt(line.Arabic, query);
+            } else if (line.English && regex.test(line.English)) {
+                excerpt = getExcerpt(line.English, query);
+            } else if (line.commentary && regex.test(line.commentary)) {
+                excerpt = getExcerpt(line.commentary, query);
+            } else if (line.rootwords && regex.test(line.rootwords)) {
+                excerpt = getExcerpt(line.rootwords, query);
+            }
+            return {
+                id: line._id,
+                excerpt: excerpt
+            };
+        });
+
+        if (matchingLines.length > 0) {
+            return {
+                id: book._id,
+                title: book.title,
+                author: book.author,
+                metadata: book.metadata || {},
+                matchingLines: matchingLines
+            };
+        } else {
+            const titleMatches = book.title && regex.test(book.title);
+            const authorMatches = book.author && regex.test(book.author);
+
+            if (titleMatches || authorMatches) {
+                return {
+                    id: book._id,
+                    title: book.title,
+                    author: book.author,
+                    metadata: book.metadata || {},
+                    matchingLines: []
+                };
+            }
+        }
+    }).filter(Boolean);
+};
+
 router.get('/search', async (req, res) => {
     const { q } = req.query;
     if (!q) {
@@ -58,7 +179,38 @@ router.get('/search', async (req, res) => {
         }
 
         // Build query based on user role
-        let query = {
+        const accessFilter = buildMongoAccessFilter(user);
+        const elasticFilters = buildElasticAccessFilter(user);
+
+        if (isElasticEnabled()) {
+            const hits = await searchBooksInIndex({
+                query: q,
+                from: 0,
+                size: 20,
+                filters: elasticFilters
+            });
+
+            if (hits && Array.isArray(hits.hits)) {
+                const ids = hits.hits.map(hit => hit._id);
+
+                if (ids.length === 0) {
+                    return res.json({ books: [] });
+                }
+
+                let mongoQuery = { _id: { $in: ids } };
+                if (accessFilter && Object.keys(accessFilter).length > 0) {
+                    mongoQuery = { $and: [mongoQuery, accessFilter] };
+                }
+
+                const books = await Book.find(mongoQuery);
+                const bookMap = new Map(books.map(book => [book._id.toString(), book]));
+                const orderedBooks = ids.map(id => bookMap.get(id)).filter(Boolean);
+
+                return res.json({ books: formatBooks(orderedBooks, q) });
+            }
+        }
+
+        const baseQuery = {
             $or: [
                 { title: { $regex: q, $options: 'i' } },
                 { author: { $regex: q, $options: 'i' } },
@@ -69,73 +221,11 @@ router.get('/search', async (req, res) => {
             ]
         };
 
-        // Add visibility filters based on role
-        if (!user) {
-            console.log("public")
-            // Public access - only show public books
-            query.visibility = 'public';
-        } else if (user.roles.includes('admin')) {
-            console.log("admin")
-            // Admin access - show all books
-            // No additional filters needed
-        } else if (user.roles.includes('member')) {
-            console.log("member")
-            // Member access - show public books and owned books
-            query.$or.push(
-                { visibility: 'public' },
-                { owner: user._id },
-                { contributors: user._id }
-            );
-        }
+        const finalQuery = mergeWithAccessFilter(baseQuery, accessFilter);
 
-        const books = await Book.find(query);
+        const books = await Book.find(finalQuery);
 
-        const formattedBooks = books.map(book => {
-            const matchingLines = book.lines.filter(line => 
-                line.Arabic.match(new RegExp(q, 'i')) ||
-                line.English.match(new RegExp(q, 'i')) ||
-                (line.commentary && line.commentary.match(new RegExp(q, 'i'))) ||
-                (line.rootwords && line.rootwords.match(new RegExp(q, 'i')))
-            ).map(line => {
-                let excerpt = '';
-                if (line.Arabic.match(new RegExp(q, 'i'))) {
-                    excerpt = getExcerpt(line.Arabic, q);
-                } else if (line.English.match(new RegExp(q, 'i'))) {
-                    excerpt = getExcerpt(line.English, q);
-                } else if (line.commentary && line.commentary.match(new RegExp(q, 'i'))) {
-                    excerpt = getExcerpt(line.commentary, q);
-                } else if (line.rootwords && line.rootwords.match(new RegExp(q, 'i'))) {
-                    excerpt = getExcerpt(line.rootwords, q);
-                }
-                return {
-                    id: line._id,
-                    excerpt: excerpt
-                };
-            });
-
-            if (matchingLines.length > 0) {
-                return {
-                    id: book._id,
-                    title: book.title,
-                    author: book.author,
-                    metadata: book.metadata || {},
-                    matchingLines: matchingLines
-                };
-            } else if (
-                book.title.match(new RegExp(q, 'i')) ||
-                book.author.match(new RegExp(q, 'i'))
-            ) {
-                return {
-                    id: book._id,
-                    title: book.title,
-                    author: book.author,
-                    metadata: book.metadata || {},
-                    matchingLines: []
-                };
-            }
-        }).filter(book => book !== undefined);
-
-        res.json({ books: formattedBooks });
+        res.json({ books: formatBooks(books, q) });
     } catch (err) {
         console.error('Error during book search:', err);
         res.status(500).send('Internal Server Error');

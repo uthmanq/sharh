@@ -7,6 +7,10 @@ const { optionalAuthenticateToken } = require('../middleware/authenticate');
 const s3Service = require('../scripts/accessS3');
 const File = require('../models/File');
 const BookText = require('../models/BookText');
+const { 
+  searchBookTextsInIndex, 
+  isEnabled: isElasticSearchEnabled 
+} = require('../services/ElasticService');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const tmp = require('tmp-promise');
@@ -564,6 +568,210 @@ router.get('/jobs', authenticateToken(['member', 'admin']), async (req, res) => 
     console.error('Error retrieving OCR jobs:', err);
     res.status(500).json({
       message: 'Error retrieving OCR jobs',
+      error: err.message
+    });
+  }
+});
+
+const isBookTextPrivilegedUser = (user) => {
+  return Boolean(user && Array.isArray(user.roles) && (user.roles.includes('admin') || user.roles.includes('editor')));
+};
+
+const buildBookTextMongoAccessFilter = (user) => {
+  if (!user) {
+    return { visibility: 'public' };
+  }
+
+  if (isBookTextPrivilegedUser(user)) {
+    return {};
+  }
+
+  return { userId: user._id };
+};
+
+const buildBookTextElasticFilter = (user) => {
+  if (!user) {
+    return { visibility: 'public' };
+  }
+
+  if (isBookTextPrivilegedUser(user)) {
+    return {};
+  }
+
+  return { userId: user._id.toString() };
+};
+
+const mergeBookTextQuery = (baseQuery, accessFilter) => {
+  if (!accessFilter || Object.keys(accessFilter).length === 0) {
+    return baseQuery;
+  }
+
+  return { $and: [baseQuery, accessFilter] };
+};
+
+const buildBookTextRegex = (query) => {
+  try {
+    return new RegExp(query, 'i');
+  } catch (err) {
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(escaped, 'i');
+  }
+};
+
+const getBookTextExcerpt = (text, query, contextLength = 120) => {
+  const lower = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const index = lower.indexOf(lowerQuery);
+  if (index === -1) {
+    return null;
+  }
+
+  let start = Math.max(0, index - contextLength);
+  let end = Math.min(text.length, index + query.length + contextLength);
+
+  start = text.lastIndexOf(' ', start);
+  if (start === -1) {
+    start = 0;
+  }
+
+  end = text.indexOf(' ', end);
+  if (end === -1) {
+    end = text.length;
+  }
+
+  return text.slice(start, end).trim();
+};
+
+const formatBookTextSearchResults = (books, query) => {
+  const regex = buildBookTextRegex(query);
+
+  return books.map(book => {
+    const matches = [];
+
+    if (book.extractedText && regex.test(book.extractedText)) {
+      matches.push({
+        pageNumber: null,
+        excerpt: getBookTextExcerpt(book.extractedText, query)
+      });
+    }
+
+    (book.pages || []).forEach(page => {
+      if (page.text && regex.test(page.text)) {
+        matches.push({
+          pageNumber: page.pageNumber,
+          excerpt: getBookTextExcerpt(page.text, query)
+        });
+      }
+    });
+
+    return {
+      bookTextId: book._id,
+      jobId: book.jobId,
+      fileId: book.fileId?._id,
+      fileName: book.fileId?.fileName,
+      author: book.fileId?.author,
+      userId: book.userId?._id,
+      username: book.userId?.username,
+      language: book.language,
+      visibility: book.visibility,
+      status: book.status,
+      pageCount: book.pageCount,
+      matches: matches.slice(0, 5),
+      updatedAt: book.updatedAt,
+      createdAt: book.createdAt
+    };
+  });
+};
+
+router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
+  const { q, limit = 20, offset = 0 } = req.query;
+
+  if (!q) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing query parameter "q"'
+    });
+  }
+
+  try {
+    const size = Math.min(parseInt(limit, 10) || 20, 50);
+    const from = parseInt(offset, 10) || 0;
+    const accessFilter = buildBookTextMongoAccessFilter(req.user);
+    const elasticFilter = buildBookTextElasticFilter(req.user);
+
+    if (isElasticSearchEnabled()) {
+      const hits = await searchBookTextsInIndex({
+        query: q,
+        from,
+        size,
+        userFilter: elasticFilter
+      });
+
+      if (hits && Array.isArray(hits.hits)) {
+        const ids = hits.hits.map(hit => hit._id);
+
+        if (ids.length === 0) {
+          return res.status(200).json({
+            success: true,
+            total: hits.total?.value || 0,
+            limit: size,
+            offset: from,
+            books: []
+          });
+        }
+
+        let mongoQuery = { _id: { $in: ids } };
+        if (accessFilter && Object.keys(accessFilter).length > 0) {
+          mongoQuery = { $and: [mongoQuery, accessFilter] };
+        }
+
+        const docs = await BookText.find(mongoQuery)
+          .populate('fileId', 'fileName author fileType fileSize s3Key')
+          .populate('userId', 'username email');
+
+        const docMap = new Map(docs.map(doc => [doc._id.toString(), doc]));
+        const ordered = ids.map(id => docMap.get(id)).filter(Boolean);
+
+        return res.status(200).json({
+          success: true,
+          total: hits.total?.value || ordered.length,
+          limit: size,
+          offset: from,
+          books: formatBookTextSearchResults(ordered, q)
+        });
+      }
+    }
+
+    const baseQuery = {
+      $or: [
+        { extractedText: { $regex: q, $options: 'i' } },
+        { 'pages.text': { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    const finalQuery = mergeBookTextQuery(baseQuery, accessFilter);
+
+    const [books, total] = await Promise.all([
+      BookText.find(finalQuery)
+        .populate('fileId', 'fileName author fileType fileSize s3Key')
+        .populate('userId', 'username email')
+        .limit(size)
+        .skip(from),
+      BookText.countDocuments(finalQuery)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      total,
+      limit: size,
+      offset: from,
+      books: formatBookTextSearchResults(books, q)
+    });
+  } catch (err) {
+    console.error('Error searching OCR books:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error searching books',
       error: err.message
     });
   }

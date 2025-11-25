@@ -10,6 +10,17 @@
 
 In the project directory, you can run:
 
+## Elasticsearch configuration
+
+Server side search now relies on Elasticsearch for indexing `Book` and `BookText` documents. Set the following environment variables before starting the API server:
+
+- `ELASTICSEARCH_NODE` – required to enable Elasticsearch (e.g. `http://localhost:9200`). If this is omitted, the server falls back to MongoDB-only search.
+- `ELASTICSEARCH_USERNAME` / `ELASTICSEARCH_PASSWORD` – optional basic auth credentials.
+- `ELASTICSEARCH_BOOK_INDEX` – optional override for the books index name (defaults to `books`).
+- `ELASTICSEARCH_BOOK_TEXT_INDEX` – optional override for the OCR/book text index name (defaults to `book_texts`).
+
+Once configured, any updates to `Book` or `BookText` documents will be indexed automatically, and the `/books/search` plus `/ocr/books/search` routes will query Elasticsearch when available.
+
 ### `npm start`
 
 Runs the app in the development mode.\

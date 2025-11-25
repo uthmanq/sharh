@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const { 
+  indexBookTextDocument, 
+  removeBookTextDocument 
+} = require('../services/ElasticService');
 
 const BookTextSchema = new Schema({
   fileId: {
@@ -86,6 +90,28 @@ BookTextSchema.pre('save', function(next) {
   }
 
   next();
+});
+
+BookTextSchema.post('save', function(doc) {
+  indexBookTextDocument(doc);
+});
+
+BookTextSchema.post('findOneAndUpdate', function(doc) {
+  if (doc) {
+    indexBookTextDocument(doc);
+  }
+});
+
+BookTextSchema.post('findOneAndDelete', function(doc) {
+  if (doc && doc._id) {
+    removeBookTextDocument(doc._id);
+  }
+});
+
+BookTextSchema.post('deleteOne', { document: true, query: false }, function(doc) {
+  if (doc && doc._id) {
+    removeBookTextDocument(doc._id);
+  }
 });
 
 module.exports = mongoose.model('BookText', BookTextSchema);
