@@ -118,7 +118,7 @@ async function ensureIndices() {
   ];
 
   for (const index of indicesToEnsure) {
-    const exists = await es.indices.exists({ index: index.name });
+    const { body: exists } = await es.indices.exists({ index: index.name });
     if (!exists) {
       await es.indices.create({ index: index.name, body: index.body });
     }
