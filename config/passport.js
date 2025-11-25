@@ -23,7 +23,7 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || '/user/auth/google/callback',
     passReqToCallback: true,
-    store: true  // Enable state storage for custom redirect URLs
+    store: false
 }, async (req, accessToken, refreshToken, profile, done) => {
     try {
         // Check if user already exists with this Google ID
