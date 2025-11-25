@@ -21,6 +21,10 @@ Server side search now relies on Elasticsearch for indexing `Book` and `BookText
 
 Once configured, any updates to `Book` or `BookText` documents will be indexed automatically, and the `/books/search` plus `/ocr/books/search` routes will query Elasticsearch when available.
 
+### Reindexing existing data
+
+If you add Elasticsearch after books already exist, run `npm run reindexElasticsearch` once to push all current `Book` and `BookText` records into the search indices. The script requires both `MONGODB_URI` and `ELASTICSEARCH_NODE` to be set.
+
 ### `npm start`
 
 Runs the app in the development mode.\

@@ -52,7 +52,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "promoteUser": "node scripts/promoteUser.js",
-    "createIngestJobs": "node scripts/createAgentsetIngestJobs.js"
+    "createIngestJobs": "node scripts/createAgentsetIngestJobs.js",
+    "reindexElasticsearch": "node scripts/reindexElasticsearch.js"
   },
   "eslintConfig": {
     "extends": [
