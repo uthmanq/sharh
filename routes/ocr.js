@@ -10,6 +10,7 @@ const BookText = require('../models/BookText');
 const BookTextPage = require('../models/BookTextPage');
 const {
   searchBookTextsInIndex,
+  searchBookTextPagesInIndex,
   isEnabled: isElasticSearchEnabled
 } = require('../services/ElasticService');
 const { v4: uuidv4 } = require('uuid');
@@ -711,9 +712,7 @@ const getBookTextExcerpt = (text, query, contextLength = 120) => {
   return text.slice(start, end).trim();
 };
 
-const formatBookTextSearchResults = (books, query) => {
-  const regex = buildBookTextRegex(query);
-
+const formatBookTextSearchResults = (books, query, regex, pageMatchesMap = {}) => {
   return books.map(book => {
     const matches = [];
 
@@ -724,8 +723,10 @@ const formatBookTextSearchResults = (books, query) => {
       });
     }
 
-    // Note: Pages are now in BookTextPage collection
-    // Page-level search would require a separate query to BookTextPage
+    const pageMatches = pageMatchesMap[book._id.toString()] || [];
+    pageMatches.forEach(match => {
+      matches.push(match);
+    });
 
     return {
       bookTextId: book._id,
@@ -748,6 +749,79 @@ const formatBookTextSearchResults = (books, query) => {
   });
 };
 
+const findMatchingPagesForBooks = async (bookIds = [], regex, query, limitPerBook = 5) => {
+  if (!bookIds.length || !regex) {
+    return {};
+  }
+
+  try {
+    const maxDocuments = bookIds.length * limitPerBook * 3;
+    const pages = await BookTextPage.find({
+      bookTextId: { $in: bookIds },
+      text: regex
+    })
+      .select('bookTextId pageNumber text')
+      .sort({ pageNumber: 1 })
+      .limit(maxDocuments)
+      .lean();
+
+    return pages.reduce((acc, page) => {
+      const key = page.bookTextId.toString();
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      if (acc[key].length >= limitPerBook) {
+        return acc;
+      }
+
+      const excerpt = getBookTextExcerpt(page.text || '', query);
+      if (excerpt) {
+        acc[key].push({
+          pageNumber: page.pageNumber,
+          excerpt
+        });
+      }
+
+      return acc;
+    }, {});
+  } catch (err) {
+    console.error('Error fetching page matches for search results:', err);
+    return {};
+  }
+};
+
+const buildPageMatchesFromHits = (hits, query, limitPerBook = 5) => {
+  if (!hits || !Array.isArray(hits.hits)) {
+    return {};
+  }
+
+  return hits.hits.reduce((acc, hit) => {
+    const source = hit._source || {};
+    const bookTextId = source.bookTextId;
+    if (!bookTextId) {
+      return acc;
+    }
+
+    if (!acc[bookTextId]) {
+      acc[bookTextId] = [];
+    }
+
+    if (acc[bookTextId].length >= limitPerBook) {
+      return acc;
+    }
+
+    const excerpt = hit.highlight?.text?.[0] || getBookTextExcerpt(source.text || '', query);
+    if (excerpt) {
+      acc[bookTextId].push({
+        pageNumber: source.pageNumber,
+        excerpt
+      });
+    }
+
+    return acc;
+  }, {});
+};
+
 router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
   const { q, limit = 20, offset = 0 } = req.query;
 
@@ -761,31 +835,42 @@ router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
   try {
     const size = Math.min(parseInt(limit, 10) || 20, 50);
     const from = parseInt(offset, 10) || 0;
+    const regex = buildBookTextRegex(q);
     const accessFilter = buildBookTextMongoAccessFilter(req.user);
     const elasticFilter = buildBookTextElasticFilter(req.user);
 
     if (isElasticSearchEnabled()) {
-      const hits = await searchBookTextsInIndex({
-        query: q,
-        from,
-        size,
-        userFilter: elasticFilter
+      const [textHits, pageHits] = await Promise.all([
+        searchBookTextsInIndex({
+          query: q,
+          from,
+          size,
+          userFilter: elasticFilter
+        }),
+        searchBookTextPagesInIndex({
+          query: q,
+          from,
+          size,
+          userFilter: elasticFilter
+        })
+      ]);
+
+      const textIds = Array.isArray(textHits?.hits) ? textHits.hits.map(hit => hit._id) : [];
+      const pageIds = Array.isArray(pageHits?.hits)
+        ? pageHits.hits
+            .map(hit => hit._source?.bookTextId)
+            .filter(Boolean)
+        : [];
+
+      const combinedIds = [...textIds];
+      pageIds.forEach(id => {
+        if (!combinedIds.includes(id)) {
+          combinedIds.push(id);
+        }
       });
 
-      if (hits && Array.isArray(hits.hits)) {
-        const ids = hits.hits.map(hit => hit._id);
-
-        if (ids.length === 0) {
-          return res.status(200).json({
-            success: true,
-            total: hits.total?.value || 0,
-            limit: size,
-            offset: from,
-            books: []
-          });
-        }
-
-        let mongoQuery = { _id: { $in: ids } };
+      if (combinedIds.length) {
+        let mongoQuery = { _id: { $in: combinedIds } };
         if (accessFilter && Object.keys(accessFilter).length > 0) {
           mongoQuery = { $and: [mongoQuery, accessFilter] };
         }
@@ -795,23 +880,32 @@ router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
           .populate('userId', 'username email');
 
         const docMap = new Map(docs.map(doc => [doc._id.toString(), doc]));
-        const ordered = ids.map(id => docMap.get(id)).filter(Boolean);
+        const ordered = combinedIds.map(id => docMap.get(id)).filter(Boolean);
+        const pageMatches = buildPageMatchesFromHits(pageHits, q);
 
-        return res.status(200).json({
-          success: true,
-          total: hits.total?.value || ordered.length,
-          limit: size,
-          offset: from,
-          books: formatBookTextSearchResults(ordered, q)
-        });
+        if (ordered.length) {
+          const totalCount = textHits?.total?.value ?? pageHits?.total?.value ?? ordered.length;
+          return res.status(200).json({
+            success: true,
+            total: totalCount,
+            limit: size,
+            offset: from,
+            books: formatBookTextSearchResults(ordered, q, regex, pageMatches)
+          });
+        }
       }
     }
 
     // Note: Pages are now in a separate BookTextPage collection
-    // Only search in extractedText field (which contains the full text)
-    const baseQuery = {
-      extractedText: { $regex: q, $options: 'i' }
-    };
+    // Search extractedText and include books that have matching pages
+    const pageMatchIds = await BookTextPage.distinct('bookTextId', { text: regex });
+
+    const orConditions = [{ extractedText: { $regex: q, $options: 'i' } }];
+    if (pageMatchIds.length > 0) {
+      orConditions.push({ _id: { $in: pageMatchIds } });
+    }
+
+    const baseQuery = orConditions.length === 1 ? orConditions[0] : { $or: orConditions };
 
     const finalQuery = mergeBookTextQuery(baseQuery, accessFilter);
 
@@ -823,13 +917,18 @@ router.get('/books/search', optionalAuthenticateToken(), async (req, res) => {
         .skip(from),
       BookText.countDocuments(finalQuery)
     ]);
+    const pageMatches = await findMatchingPagesForBooks(
+      books.map(book => book._id),
+      regex,
+      q
+    );
 
     res.status(200).json({
       success: true,
       total,
       limit: size,
       offset: from,
-      books: formatBookTextSearchResults(books, q)
+      books: formatBookTextSearchResults(books, q, regex, pageMatches)
     });
   } catch (err) {
     console.error('Error searching OCR books:', err);

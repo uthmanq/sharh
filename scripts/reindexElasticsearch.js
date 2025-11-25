@@ -4,10 +4,12 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
 const Book = require('../models/Book');
 const BookText = require('../models/BookText');
+const BookTextPage = require('../models/BookTextPage');
 const {
   isEnabled,
   indexBookDocument,
-  indexBookTextDocument
+  indexBookTextDocument,
+  indexBookTextPageDocument
 } = require('../services/ElasticService');
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -30,6 +32,8 @@ async function reindex() {
 
   const books = await Book.find();
   const bookTexts = await BookText.find();
+  const bookTextPages = await BookTextPage.find();
+  const bookTextMap = new Map(bookTexts.map(text => [text._id.toString(), text]));
 
   console.log(`Indexing ${books.length} books...`);
   for (const book of books) {
@@ -39,6 +43,15 @@ async function reindex() {
   console.log(`Indexing ${bookTexts.length} book texts...`);
   for (const text of bookTexts) {
     await indexBookTextDocument(text);
+  }
+
+  console.log(`Indexing ${bookTextPages.length} book text pages...`);
+  for (const page of bookTextPages) {
+    const parent = bookTextMap.get(page.bookTextId.toString()) || await BookText.findById(page.bookTextId);
+    if (parent) {
+      bookTextMap.set(parent._id.toString(), parent);
+    }
+    await indexBookTextPageDocument(page, parent);
   }
 
   console.log('Reindex complete.');

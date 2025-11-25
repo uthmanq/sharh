@@ -49,65 +49,51 @@ BookTextPageSchema.pre('save', function(next) {
   next();
 });
 
-// Post-save middleware to re-index parent BookText in Elasticsearch
-BookTextPageSchema.post('save', async function(doc) {
-  try {
-    // Lazy load to avoid circular dependency
-    const { indexBookTextDocument } = require('../services/ElasticService');
-    const BookText = mongoose.model('BookText');
-    const bookText = await BookText.findById(doc.bookTextId);
-    if (bookText) {
-      await indexBookTextDocument(bookText);
-    }
-  } catch (error) {
-    console.error('Error re-indexing BookText after page save:', error);
-  }
-});
+async function reindexPageAndParent(doc) {
+  if (!doc) return;
 
-// Post-update middleware to re-index parent BookText in Elasticsearch
-BookTextPageSchema.post('findOneAndUpdate', async function(doc) {
   try {
-    if (!doc) return;
-    // Lazy load to avoid circular dependency
-    const { indexBookTextDocument } = require('../services/ElasticService');
+    const {
+      indexBookTextDocument,
+      indexBookTextPageDocument
+    } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
-      await indexBookTextDocument(bookText);
+      await Promise.all([
+        indexBookTextDocument(bookText),
+        indexBookTextPageDocument(doc, bookText)
+      ]);
+    } else {
+      await indexBookTextPageDocument(doc);
     }
   } catch (error) {
-    console.error('Error re-indexing BookText after page update:', error);
+    console.error('Error re-indexing page and parent BookText:', error);
   }
-});
+}
 
-// Post-delete middleware to re-index parent BookText in Elasticsearch
-BookTextPageSchema.post('findOneAndDelete', async function(doc) {
-  try {
-    if (!doc) return;
-    // Lazy load to avoid circular dependency
-    const { indexBookTextDocument } = require('../services/ElasticService');
-    const BookText = mongoose.model('BookText');
-    const bookText = await BookText.findById(doc.bookTextId);
-    if (bookText) {
-      await indexBookTextDocument(bookText);
-    }
-  } catch (error) {
-    console.error('Error re-indexing BookText after page delete:', error);
-  }
-});
+async function removePageAndUpdateParent(doc) {
+  if (!doc) return;
 
-BookTextPageSchema.post('deleteOne', { document: true, query: false }, async function(doc) {
   try {
-    // Lazy load to avoid circular dependency
-    const { indexBookTextDocument } = require('../services/ElasticService');
+    const {
+      indexBookTextDocument,
+      removeBookTextPageDocument
+    } = require('../services/ElasticService');
     const BookText = mongoose.model('BookText');
     const bookText = await BookText.findById(doc.bookTextId);
     if (bookText) {
       await indexBookTextDocument(bookText);
     }
+    await removeBookTextPageDocument(doc._id);
   } catch (error) {
-    console.error('Error re-indexing BookText after page delete:', error);
+    console.error('Error removing page and re-indexing parent:', error);
   }
-});
+}
+
+BookTextPageSchema.post('save', reindexPageAndParent);
+BookTextPageSchema.post('findOneAndUpdate', reindexPageAndParent);
+BookTextPageSchema.post('findOneAndDelete', removePageAndUpdateParent);
+BookTextPageSchema.post('deleteOne', { document: true, query: false }, removePageAndUpdateParent);
 
 module.exports = mongoose.model('BookTextPage', BookTextPageSchema);
