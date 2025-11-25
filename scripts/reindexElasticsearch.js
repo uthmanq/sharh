@@ -1,4 +1,6 @@
+const path = require('path');
 require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
 const Book = require('../models/Book');
 const BookText = require('../models/BookText');
@@ -7,7 +9,6 @@ const {
   indexBookDocument,
   indexBookTextDocument
 } = require('../services/ElasticService');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
