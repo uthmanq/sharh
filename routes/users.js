@@ -35,9 +35,7 @@ router.post('/signup', async (req, res) => {
         const newUser = new User({ username, password, email, stripeCustomerId: customer.id });
         const savedUser = await newUser.save();
 
-        const token = jwt.sign({ id: savedUser._id }, SECRET_KEY, {
-            expiresIn: '24h'
-        });
+        const token = jwt.sign({ id: savedUser._id }, SECRET_KEY);
 
         res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId, roles: savedUser.roles } });
         // Send welcome email asynchronously
@@ -468,9 +466,7 @@ router.get('/auth/google/callback',
     async (req, res) => {
         try {
             // Generate JWT token for the authenticated user
-            const token = jwt.sign({ id: req.user._id }, SECRET_KEY, {
-                expiresIn: '24h'
-            });
+            const token = jwt.sign({ id: req.user._id }, SECRET_KEY);
 
             const user = {
                 id: req.user._id,
