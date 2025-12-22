@@ -44,7 +44,7 @@ The structure must follow this format:
 
     // Call Gemini with structured contents
     const result = await genAI.models.generateContent({
-      model: "gemini-1.5-flash", // or gemini-1.5-pro for bigger context
+      model: "gemini-3-flash-preview", // or gemini-1.5-pro for bigger context
       contents: [
         {
           role: "user",
