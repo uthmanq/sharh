@@ -109,30 +109,8 @@ app.use((err, req, res, next) => {
   }
 });
 
-if (ENVIRONMENT === 'development') {
+const PORT = process.env.PORT || 3000;
 
-
-  // Start HTTP server without HTTPS for development
-  http.createServer(app).listen(80, () => {
-    console.log('Development HTTP Server running on port 80');
-  });
-} else {
-  // HTTPS Options
-  const options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/app.ummahspot.com/fullchain.pem')
-  };
-
-  // Start HTTPS Server
-  https.createServer(options, app).listen(443, () => {
-    console.log('HTTPS Server running on port 443. Version 1.1');
-  });
-
-  // Redirect HTTP to HTTPS
-  http.createServer((req, res) => {
-    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-    res.end();
-  }).listen(80, () => {
-    console.log('HTTP Server running on port 80 and redirecting to HTTPS.');
-  });
-}
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`App running on http://localhost:${PORT}`);
+});
