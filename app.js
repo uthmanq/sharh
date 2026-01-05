@@ -24,6 +24,10 @@ if (args.includes('--teststripe')) {
   console.log('Stripe Env is set to ', process.env.STRIPE_SECRET_KEY);
 }
 
+// Stripe webhook needs raw body for signature verification
+// This MUST be before the regular body parsers
+app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
+
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' })); // Increased limit for OCR results with large text
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));

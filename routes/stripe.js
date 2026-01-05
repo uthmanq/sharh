@@ -5,6 +5,8 @@ const stripeConfig = require('../config/stripeConfig')
 const stripe = require('stripe')(stripeConfig.secretKey);
 const authenticateToken = require('../middleware/authenticate');
 const User = require('../models/User');
+const UsageService = require('../services/UsageService');
+const PageUsageLog = require('../models/PageUsageLog');
 const router = express.Router();
 
 
@@ -405,5 +407,166 @@ router.get('/subscriptions/all-with-users', authenticateToken(['admin']), async 
     res.status(500).send('Failed to retrieve subscriptions with user data');
   }
 });
+
+// ============================================
+// USAGE TRACKING ENDPOINTS
+// ============================================
+
+// Get current usage status
+router.get('/usage', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const status = await UsageService.getUsageStatus(req.user.id);
+    res.json(status);
+  } catch (error) {
+    console.error('Error retrieving usage status:', error);
+    res.status(500).send('Failed to retrieve usage information');
+  }
+});
+
+// Estimate cost for a given page count
+router.post('/usage/estimate', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const { pageCount } = req.body;
+
+    if (!pageCount || pageCount < 1) {
+      return res.status(400).json({ error: 'Invalid page count' });
+    }
+
+    const estimate = await UsageService.estimateCost(req.user.id, pageCount);
+    res.json(estimate);
+  } catch (error) {
+    console.error('Error estimating cost:', error);
+    res.status(500).send('Failed to estimate cost');
+  }
+});
+
+// Get usage history (paginated)
+router.get('/usage/history', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const { limit = 10, offset = 0 } = req.query;
+
+    const result = await UsageService.getUsageHistory(
+      req.user.id,
+      parseInt(limit),
+      parseInt(offset)
+    );
+
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error retrieving usage history:', error);
+    res.status(500).send('Failed to retrieve usage history');
+  }
+});
+
+// ============================================
+// STRIPE WEBHOOK HANDLER
+// ============================================
+
+// Webhook endpoint - Note: raw body parsing is configured in app.js
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  // Use test or live webhook secret based on STRIPE_ENV
+  const endpointSecret = process.env.STRIPE_ENV === 'test'
+    ? process.env.STRIPE_WEBHOOK_SECRET_TEST
+    : process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  try {
+    switch (event.type) {
+      case 'invoice.paid':
+        // Subscription renewed - reset credits
+        await handleInvoicePaid(event.data.object);
+        break;
+
+      case 'customer.subscription.updated':
+        // Plan change or other subscription update
+        await handleSubscriptionUpdated(event.data.object);
+        break;
+
+      case 'customer.subscription.deleted':
+        // Subscription terminated
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+
+      case 'invoice.payment_failed':
+        // Payment failed - log for monitoring
+        await handlePaymentFailed(event.data.object);
+        break;
+
+      default:
+        console.log(`Unhandled webhook event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Webhook event handlers
+async function handleInvoicePaid(invoice) {
+  // Only process subscription invoices
+  if (!invoice.subscription) return;
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+    const priceId = subscription.items.data[0].price.id;
+
+    // Reset credits for new billing period
+    await UsageService.resetCreditsForNewPeriod(
+      subscription.id,
+      subscription.current_period_start,
+      subscription.current_period_end,
+      priceId
+    );
+
+    console.log(`Credits reset for subscription ${subscription.id}`);
+  } catch (error) {
+    console.error('Error handling invoice.paid:', error);
+  }
+}
+
+async function handleSubscriptionUpdated(subscription) {
+  try {
+    const priceId = subscription.items.data[0].price.id;
+
+    if (subscription.cancel_at_period_end) {
+      // Subscription set to cancel - user keeps credits until period end
+      await UsageService.handleSubscriptionCancellation(subscription.id);
+    } else {
+      // Plan change or reactivation
+      await UsageService.handlePlanChange(subscription.id, priceId);
+    }
+  } catch (error) {
+    console.error('Error handling subscription.updated:', error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription) {
+  try {
+    await UsageService.handleSubscriptionDeletion(subscription.id);
+    console.log(`Subscription ${subscription.id} deleted - usage records closed`);
+  } catch (error) {
+    console.error('Error handling subscription.deleted:', error);
+  }
+}
+
+async function handlePaymentFailed(invoice) {
+  console.error(`Payment failed for invoice ${invoice.id}, customer ${invoice.customer}`);
+  // Could send notification to user here
+}
 
 module.exports = router;

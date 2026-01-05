@@ -4,6 +4,8 @@ const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
 const multer = require('multer');
 const authenticateToken = require('../middleware/authenticate');
 const { optionalAuthenticateToken } = require('../middleware/authenticate');
+const { requireActiveSubscription } = require('../middleware/checkSubscription');
+const UsageService = require('../services/UsageService');
 const s3Service = require('../scripts/accessS3');
 const File = require('../models/File');
 const BookText = require('../models/BookText');
@@ -322,10 +324,45 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
       }
     }
 
+    // Track page usage when job completes successfully
+    let usageResult = null;
+    if (status === 'completed' && pageCount && pageCount > 0) {
+      try {
+        usageResult = await UsageService.recordPageUsage(
+          userId,
+          jobId,
+          bookText._id,
+          pageCount
+        );
+
+        // Add usage info to metadata
+        bookText.metadata = {
+          ...bookText.metadata,
+          usageInfo: {
+            freePages: usageResult.freePages,
+            overagePages: usageResult.overagePages,
+            overageChargeCents: usageResult.overageChargeCents
+          }
+        };
+        await bookText.save();
+
+        console.log(`Usage recorded for job ${jobId}: ${pageCount} pages (${usageResult.freePages} free, ${usageResult.overagePages} overage)`);
+      } catch (usageError) {
+        console.error('Error recording page usage:', usageError);
+        // Don't fail the result submission - log and continue
+        bookText.metadata = {
+          ...bookText.metadata,
+          usageError: usageError.message
+        };
+        await bookText.save();
+      }
+    }
+
     res.status(201).json({
       message: 'OCR result saved successfully',
       bookTextId: bookText._id.toString(),
-      status: bookText.status
+      status: bookText.status,
+      usageInfo: usageResult
     });
 
   } catch (err) {
@@ -338,7 +375,8 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
 });
 
 // Route to upload a PDF/image and create an OCR job
-router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), async (req, res) => {
+// Requires active subscription to use OCR services
+router.post('/', authenticateToken(['member', 'admin']), requireActiveSubscription, upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
 
@@ -441,7 +479,7 @@ router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), 
     const command = new SendMessageCommand(sqsParams);
     const sqsResponse = await sqsClient.send(command);
 
-    // Return success response
+    // Return success response with usage info
     res.status(201).json({
       message: 'OCR job created successfully',
       jobId: jobId,
@@ -450,7 +488,14 @@ router.post('/', authenticateToken(['member', 'admin']), upload.single('file'), 
       fileName: fileName,
       s3Key: s3Data.Key,
       sqsMessageId: sqsResponse.MessageId,
-      status: 'pending'
+      status: 'pending',
+      // Include usage info from subscription check middleware
+      usageInfo: req.usageStatus ? {
+        remainingCredits: req.usageStatus.remainingCredits,
+        tierCredits: req.usageStatus.tierCredits,
+        pagesUsed: req.usageStatus.pagesUsed,
+        billingPeriodEnd: req.usageStatus.billingPeriodEnd
+      } : null
     });
 
   } catch (err) {
