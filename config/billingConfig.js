@@ -13,8 +13,8 @@ const tierCredits = {
 
 // Overage pricing configuration
 const overageConfig = {
-  pricePerPageCents: 0.5,  // $0.005 per page = 0.5 cents
-  minimumChargeCents: 1    // Stripe minimum charge is 1 cent ($0.01)
+  pricePerPageCents: 2,    // $0.02 per page = 2 cents
+  minimumChargeCents: 2    // Minimum charge is 2 cents ($0.02)
 };
 
 /**

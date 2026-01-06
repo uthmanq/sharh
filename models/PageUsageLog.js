@@ -43,6 +43,17 @@ const PageUsageLogSchema = new Schema({
   stripeInvoiceItemId: {
     type: String
   },
+  stripeInvoiceId: {
+    type: String
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['not_required', 'success', 'failed', 'pending'],
+    default: 'not_required'
+  },
+  paymentError: {
+    type: String
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -1,4 +1,4 @@
-const API_URL = 'https://app.ummahspot.com';
+const API_BASE_URL = process.env.NODE_ENV === "production" ? 'https://app.ummahspot.com' : 'http://localhost:3000';
 
 // Check authentication status on load
 async function checkAuth() {
@@ -54,7 +54,7 @@ async function handleLogin(e) {
     loader.style.display = 'inline-block';
 
     try {
-        const response = await fetch(`${API_URL}/user/login`, {
+        const response = await fetch(`${API_BASE_URL}/user/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -109,7 +109,7 @@ async function handleRegister(e) {
     loader.style.display = 'inline-block';
 
     try {
-        const response = await fetch(`${API_URL}/user/signup`, {
+        const response = await fetch(`${API_BASE_URL}/user/signup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

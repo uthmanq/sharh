@@ -416,7 +416,16 @@ router.get('/subscriptions/all-with-users', authenticateToken(['admin']), async 
 router.get('/usage', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
   try {
     const status = await UsageService.getUsageStatus(req.user.id);
-    res.json(status);
+
+    // Also get failed payments info
+    const failedPayments = await UsageService.getFailedPayments(req.user.id);
+
+    res.json({
+      ...status,
+      hasFailedPayments: failedPayments.hasFailedPayments,
+      failedPaymentCount: failedPayments.failedPaymentCount,
+      totalUnpaidCents: failedPayments.totalUnpaidCents
+    });
   } catch (error) {
     console.error('Error retrieving usage status:', error);
     res.status(500).send('Failed to retrieve usage information');
@@ -458,6 +467,53 @@ router.get('/usage/history', authenticateToken(['member', 'editor', 'admin']), a
   } catch (error) {
     console.error('Error retrieving usage history:', error);
     res.status(500).send('Failed to retrieve usage history');
+  }
+});
+
+// Get failed payments
+router.get('/usage/failed-payments', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const failedPayments = await UsageService.getFailedPayments(req.user.id);
+    res.json({
+      success: true,
+      ...failedPayments
+    });
+  } catch (error) {
+    console.error('Error retrieving failed payments:', error);
+    res.status(500).send('Failed to retrieve failed payments');
+  }
+});
+
+// Retry a failed payment
+router.post('/usage/retry-payment/:logId', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const { logId } = req.params;
+
+    // Verify the log belongs to this user
+    const log = await PageUsageLog.findById(logId);
+    if (!log) {
+      return res.status(404).json({ error: 'Payment record not found' });
+    }
+    if (log.userId.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const result = await UsageService.retryFailedPayment(logId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error retrying payment:', error);
+    res.status(500).json({ success: false, message: 'Failed to retry payment' });
+  }
+});
+
+// Check upload eligibility (subscription + payment status)
+router.get('/usage/can-upload', authenticateToken(['member', 'editor', 'admin']), async (req, res) => {
+  try {
+    const result = await UsageService.canUploadWithPaymentCheck(req.user.id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking upload eligibility:', error);
+    res.status(500).send('Failed to check upload eligibility');
   }
 });
 

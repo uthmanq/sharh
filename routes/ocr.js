@@ -326,13 +326,17 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
 
     // Track page usage when job completes successfully
     let usageResult = null;
-    if (status === 'completed' && pageCount && pageCount > 0) {
+    // Use pageCount from request, or compute from pages array, or from bookText
+    const actualPageCount = pageCount || (pages && pages.length) || bookText.pageCount;
+    console.log(`[OCR Result] Job ${jobId} - status: ${status}, pageCount: ${pageCount}, pages.length: ${pages?.length}, actualPageCount: ${actualPageCount}`);
+
+    if (status === 'completed' && actualPageCount && actualPageCount > 0) {
       try {
         usageResult = await UsageService.recordPageUsage(
           userId,
           jobId,
           bookText._id,
-          pageCount
+          actualPageCount
         );
 
         // Add usage info to metadata
@@ -346,7 +350,7 @@ router.post('/result', authenticateToken(['admin', 'editor']), async (req, res) 
         };
         await bookText.save();
 
-        console.log(`Usage recorded for job ${jobId}: ${pageCount} pages (${usageResult.freePages} free, ${usageResult.overagePages} overage)`);
+        console.log(`[OCR Result] Usage recorded for job ${jobId}: ${actualPageCount} pages (${usageResult.freePages} free, ${usageResult.overagePages} overage)`);
       } catch (usageError) {
         console.error('Error recording page usage:', usageError);
         // Don't fail the result submission - log and continue
