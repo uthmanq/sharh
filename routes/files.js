@@ -14,7 +14,10 @@ const path = require('path');
 const tmp = require('tmp-promise');
 
 // Set up multer to store files temporarily on the server
-const upload = multer({ dest: '../uploads/' }); // Files will be temporarily stored in 'uploads/' folder
+const upload = multer({
+    dest: '../uploads/',
+    limits: { fileSize: 1024 * 1024 * 1024 } // 1GB file size limit
+}); // Files will be temporarily stored in 'uploads/' folder
 
 const videoUpload = multer({
     dest: '../uploads/',
@@ -35,7 +38,7 @@ const videoUpload = multer({
         }
     },
     limits: {
-        fileSize: 1024 * 1024 * 500 // 500MB file size limit
+        fileSize: 1024 * 1024 * 1024 // 1GB file size limit
     }
 });
 
@@ -67,7 +70,7 @@ async function generateVideoThumbnail(videoPath, outputPath) {
   }
 
 // Route to upload a file to S3 and save metadata in MongoDB
-router.post('/upload', authenticateToken(['admin']), upload.single('file'), async (req, res) => {
+router.post('/upload', authenticateToken(['member', 'admin']), upload.single('file'), async (req, res) => {
     try {
         const file = req.file; // The uploaded file
         const author = req.body.author || 'Unknown'; // Optional author field
@@ -328,7 +331,7 @@ router.get('/', async (req, res) => {
 
 // Route to upload a video to S3 and save metadata in MongoDB
 // Modified video upload route with improved thumbnail handling
-router.post('/videos/upload', authenticateToken(['admin']), videoUpload.single('video'), async (req, res) => {
+router.post('/videos/upload', authenticateToken(['member', 'admin']), videoUpload.single('video'), async (req, res) => {
     try {
         const file = req.file;
         if (!file) {
