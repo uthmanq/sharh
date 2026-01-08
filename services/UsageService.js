@@ -673,6 +673,148 @@ class UsageService {
       }))
     };
   }
+
+  /**
+   * Refund credits to a user's active usage record (admin only)
+   * @param {string} userId - MongoDB user ID to refund
+   * @param {number} creditAmount - Number of credits (pages) to refund
+   * @param {string} adminUserId - Admin performing the refund
+   * @param {string} reason - Reason for refund
+   * @returns {Promise<Object>} Refund result with updated usage status
+   */
+  static async refundCredits(userId, creditAmount, adminUserId, reason) {
+    console.log(`[UsageService] refundCredits called - userId: ${userId}, creditAmount: ${creditAmount}, adminUserId: ${adminUserId}`);
+
+    // Validate credit amount
+    if (!creditAmount || creditAmount <= 0) {
+      throw new Error('Credit amount must be a positive number');
+    }
+
+    // Find active usage record for the user
+    const usageRecord = await UsageRecord.findOne({
+      userId: userId,
+      status: 'active'
+    });
+
+    if (!usageRecord) {
+      throw new Error('No active usage record found for this user');
+    }
+
+    // Validate that we're not refunding more than what was used
+    if (creditAmount > usageRecord.pagesUsed) {
+      throw new Error(`Cannot refund ${creditAmount} credits. User has only used ${usageRecord.pagesUsed} pages.`);
+    }
+
+    // Use atomic update to decrement pagesUsed
+    const updatedRecord = await UsageRecord.findByIdAndUpdate(
+      usageRecord._id,
+      {
+        $inc: { pagesUsed: -creditAmount },
+        $set: { updatedAt: Date.now() }
+      },
+      { new: true }
+    );
+
+    const remainingCredits = Math.max(0, updatedRecord.tierCredits - updatedRecord.pagesUsed);
+
+    console.log(`[UsageService] Refund successful - userId: ${userId}, refunded: ${creditAmount}, newPagesUsed: ${updatedRecord.pagesUsed}, reason: ${reason}`);
+
+    return {
+      success: true,
+      refundedCredits: creditAmount,
+      userId: userId,
+      reason: reason,
+      adminUserId: adminUserId,
+      updatedUsage: {
+        tierCredits: updatedRecord.tierCredits,
+        pagesUsed: updatedRecord.pagesUsed,
+        remainingCredits: remainingCredits,
+        billingPeriodStart: updatedRecord.billingPeriodStart,
+        billingPeriodEnd: updatedRecord.billingPeriodEnd
+      }
+    };
+  }
+
+  /**
+   * Get usage status for a specific user (admin function)
+   * @param {string} userId - MongoDB user ID
+   * @returns {Promise<Object>} Usage status object
+   */
+  static async getUsageStatusForAdmin(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user is admin
+    const userIsAdmin = user.roles && user.roles.includes('admin');
+    if (userIsAdmin) {
+      return {
+        hasSubscription: true,
+        isAdmin: true,
+        tierCredits: Infinity,
+        pagesUsed: 0,
+        remainingCredits: Infinity,
+        isInOverage: false,
+        overagePages: 0,
+        overageChargedCents: 0,
+        billingPeriodStart: null,
+        billingPeriodEnd: null,
+        priceId: null,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      };
+    }
+
+    const usageRecord = await UsageRecord.findOne({
+      userId: userId,
+      status: 'active'
+    });
+
+    if (!usageRecord) {
+      return {
+        hasSubscription: false,
+        tierCredits: 0,
+        pagesUsed: 0,
+        remainingCredits: 0,
+        isInOverage: false,
+        overagePages: 0,
+        overageChargedCents: 0,
+        billingPeriodStart: null,
+        billingPeriodEnd: null,
+        priceId: null,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email
+        }
+      };
+    }
+
+    const remainingCredits = Math.max(0, usageRecord.tierCredits - usageRecord.pagesUsed);
+    const isInOverage = usageRecord.pagesUsed > usageRecord.tierCredits;
+
+    return {
+      hasSubscription: true,
+      tierCredits: usageRecord.tierCredits,
+      pagesUsed: usageRecord.pagesUsed,
+      remainingCredits: remainingCredits,
+      isInOverage: isInOverage,
+      overagePages: usageRecord.overagePages,
+      overageChargedCents: usageRecord.overageChargedCents,
+      billingPeriodStart: usageRecord.billingPeriodStart,
+      billingPeriodEnd: usageRecord.billingPeriodEnd,
+      priceId: usageRecord.priceId,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    };
+  }
 }
 
 module.exports = UsageService;

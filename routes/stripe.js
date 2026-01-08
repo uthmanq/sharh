@@ -518,6 +518,61 @@ router.get('/usage/can-upload', authenticateToken(['member', 'editor', 'admin'])
 });
 
 // ============================================
+// ADMIN CREDIT MANAGEMENT ENDPOINTS
+// ============================================
+
+// Get usage status for a specific user (admin only)
+router.get('/usage/admin/:userId', authenticateToken(['admin']), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const status = await UsageService.getUsageStatusForAdmin(userId);
+    res.json({
+      success: true,
+      ...status
+    });
+  } catch (error) {
+    console.error('Error retrieving user usage status:', error);
+    res.status(error.message === 'User not found' ? 404 : 500).json({
+      success: false,
+      error: error.message || 'Failed to retrieve user usage status'
+    });
+  }
+});
+
+// Refund credits to a user (admin only)
+router.post('/usage/admin/refund', authenticateToken(['admin']), async (req, res) => {
+  try {
+    const { userId, creditAmount, reason } = req.body;
+
+    // Validate required fields
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required' });
+    }
+    if (!creditAmount || creditAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Credit amount must be a positive number' });
+    }
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Reason for refund is required' });
+    }
+
+    const result = await UsageService.refundCredits(
+      userId,
+      parseInt(creditAmount),
+      req.user.id,
+      reason.trim()
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error processing credit refund:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to process credit refund'
+    });
+  }
+});
+
+// ============================================
 // STRIPE WEBHOOK HANDLER
 // ============================================
 
