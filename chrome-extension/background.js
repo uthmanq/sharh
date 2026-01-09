@@ -22,7 +22,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })
             .catch((error) => {
                 console.error('OAuth error:', error);
-                sendResponse({ success: false, error: error.message });
+                const errorMessage = error?.message || error?.toString() || 'Authentication service temporarily unavailable';
+                sendResponse({ success: false, error: errorMessage });
             });
         return true; // Keep the message channel open for async response
     }
