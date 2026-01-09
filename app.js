@@ -101,18 +101,53 @@ app.use('/affiliates', affiliateRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
+  // Log comprehensive error details
+  const errorDetails = {
+    timestamp: new Date().toISOString(),
+    message: err.message || 'Unknown error',
+    name: err.name || 'UnknownError',
+    stack: err.stack || 'No stack trace available',
+    url: req.url,
+    method: req.method,
+    body: req.body,
+    query: req.query,
+    params: req.params,
+    headers: {
+      'user-agent': req.headers['user-agent'],
+      'content-type': req.headers['content-type']
+    }
+  };
+
   if (err instanceof URIError) {
     console.error('URIError:', err.message);
     res.status(400).send('Bad Request: Malformed URL');
   } else {
     console.error('Error handling middleware caught error:');
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
-    console.error('Request URL:', req.url);
-    console.error('Request method:', req.method);
-    console.error('Request body:', JSON.stringify(req.body, null, 2));
-    res.status(500).send('Internal Server Error (MWE)');
+    console.error(JSON.stringify(errorDetails, null, 2));
+
+    // Prevent exposing sensitive error details in production
+    const isDevelopment = process.env.ENVIRONMENT === 'development';
+    const errorResponse = isDevelopment
+      ? { error: err.message || 'Internal Server Error', stack: err.stack }
+      : { error: 'Internal Server Error' };
+
+    res.status(err.status || 500).json(errorResponse);
   }
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  // Log to error tracking service if available
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Log to error tracking service if available
+  // Note: It's generally recommended to restart the process after uncaught exceptions
 });
 
 const PORT = process.env.PORT || 3000;
