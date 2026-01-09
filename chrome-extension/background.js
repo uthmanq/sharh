@@ -79,7 +79,8 @@ async function handleGoogleOAuth() {
                             console.log('Background: Auth data saved to storage');
                             resolve({ token, user });
                         } else {
-                            reject(new Error('No credentials received'));
+                            console.error('Background: Missing credentials in response URL', { token: !!token, userParam: !!userParam });
+                            reject(new Error('Authentication incomplete: No credentials received from server'));
                         }
                     } catch (e) {
                         console.error('Background: Error parsing response:', e);

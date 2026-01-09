@@ -160,7 +160,9 @@ async function handleGoogleOAuth() {
                 showLoggedInSection(response.user);
             }, 1000);
         } else {
-            showStatus('Authentication failed: ' + (response.error || 'Unknown error'), 'error');
+            const errorMessage = response.error || 'Authentication failed. Please try again or check your connection.';
+            console.error('OAuth authentication failed:', { response, error: errorMessage });
+            showStatus('Authentication failed: ' + errorMessage, 'error');
         }
     } catch (error) {
         console.error('Options: OAuth error:', error);
