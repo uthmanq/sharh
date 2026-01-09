@@ -101,6 +101,10 @@ app.use('/affiliates', affiliateRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
   if (err instanceof URIError) {
     console.error('URIError:', err.message);
     res.status(400).send('Bad Request: Malformed URL');
