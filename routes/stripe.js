@@ -7,6 +7,7 @@ const authenticateToken = require('../middleware/authenticate');
 const User = require('../models/User');
 const UsageService = require('../services/UsageService');
 const PageUsageLog = require('../models/PageUsageLog');
+const Referral = require('../models/Referral');
 const router = express.Router();
 
 
@@ -644,6 +645,15 @@ async function handleInvoicePaid(invoice) {
       priceId
     );
 
+    // Update referral tracking if this user was referred
+    await updateReferralSubscriptionStatus(
+      subscription.customer,
+      subscription.id,
+      'active',
+      priceId,
+      invoice.amount_paid
+    );
+
     console.log(`Credits reset for subscription ${subscription.id}`);
   } catch (error) {
     console.error('Error handling invoice.paid:', error);
@@ -657,9 +667,26 @@ async function handleSubscriptionUpdated(subscription) {
     if (subscription.cancel_at_period_end) {
       // Subscription set to cancel - user keeps credits until period end
       await UsageService.handleSubscriptionCancellation(subscription.id);
+      // Update referral status to canceled
+      await updateReferralSubscriptionStatus(
+        subscription.customer,
+        subscription.id,
+        'canceled',
+        priceId
+      );
     } else {
       // Plan change or reactivation
       await UsageService.handlePlanChange(subscription.id, priceId);
+      // Update referral status based on subscription status
+      const status = subscription.status === 'active' ? 'active' :
+                     subscription.status === 'past_due' ? 'past_due' :
+                     subscription.status === 'trialing' ? 'trialing' : 'active';
+      await updateReferralSubscriptionStatus(
+        subscription.customer,
+        subscription.id,
+        status,
+        priceId
+      );
     }
   } catch (error) {
     console.error('Error handling subscription.updated:', error);
@@ -669,6 +696,13 @@ async function handleSubscriptionUpdated(subscription) {
 async function handleSubscriptionDeleted(subscription) {
   try {
     await UsageService.handleSubscriptionDeletion(subscription.id);
+    // Update referral status to canceled
+    await updateReferralSubscriptionStatus(
+      subscription.customer,
+      subscription.id,
+      'canceled',
+      null
+    );
     console.log(`Subscription ${subscription.id} deleted - usage records closed`);
   } catch (error) {
     console.error('Error handling subscription.deleted:', error);
@@ -677,7 +711,55 @@ async function handleSubscriptionDeleted(subscription) {
 
 async function handlePaymentFailed(invoice) {
   console.error(`Payment failed for invoice ${invoice.id}, customer ${invoice.customer}`);
-  // Could send notification to user here
+  // Update referral status to past_due if applicable
+  if (invoice.subscription) {
+    const user = await User.findOne({ stripeCustomerId: invoice.customer });
+    if (user) {
+      await Referral.findOneAndUpdate(
+        { userId: user._id },
+        { subscriptionStatus: 'past_due' }
+      );
+    }
+  }
+}
+
+// Helper function to update referral subscription tracking
+async function updateReferralSubscriptionStatus(stripeCustomerId, subscriptionId, status, priceId, amountPaidCents = 0) {
+  try {
+    const user = await User.findOne({ stripeCustomerId });
+    if (!user) return;
+
+    const referral = await Referral.findOne({ userId: user._id });
+    if (!referral) return;
+
+    const updateData = {
+      stripeSubscriptionId: subscriptionId,
+      subscriptionStatus: status,
+      subscriptionPriceId: priceId
+    };
+
+    // Set first subscribed date if this is the first subscription
+    if (status === 'active' && !referral.firstSubscribedAt) {
+      updateData.firstSubscribedAt = new Date();
+    }
+
+    // Track payment amount
+    if (amountPaidCents > 0) {
+      updateData.lastPaymentAt = new Date();
+      updateData.$inc = { totalPaymentsCents: amountPaidCents };
+    }
+
+    if (updateData.$inc) {
+      const { $inc, ...rest } = updateData;
+      await Referral.findByIdAndUpdate(referral._id, { ...rest, $inc });
+    } else {
+      await Referral.findByIdAndUpdate(referral._id, updateData);
+    }
+
+    console.log(`Updated referral status for user ${user._id}: ${status}`);
+  } catch (error) {
+    console.error('Error updating referral subscription status:', error);
+  }
 }
 
 module.exports = router;

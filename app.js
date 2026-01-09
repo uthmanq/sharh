@@ -80,6 +80,7 @@ const noteRoutes = require('./routes/notes');
 const cardRoutes = require('./routes/cards');
 const cardCollectionRoutes = require('./routes/cardCollections');
 const ocrRoutes = require('./routes/ocr');
+const affiliateRoutes = require('./routes/affiliates');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -95,6 +96,7 @@ app.use('/notes', noteRoutes);
 app.use('/cards', cardRoutes);
 app.use('/card-collections', cardCollectionRoutes);
 app.use('/ocr', ocrRoutes);
+app.use('/affiliates', affiliateRoutes);
 
 
 // Error Handling Middleware

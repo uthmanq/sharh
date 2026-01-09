@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 const User = require('../models/User');
+const Affiliate = require('../models/Affiliate');
+const Referral = require('../models/Referral');
 const authenticateToken = require('../middleware/authenticate'); // Use your existing middleware
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -15,7 +17,7 @@ const passport = require('../config/passport');
 
 // POST Signup Endpoint
 router.post('/signup', async (req, res) => {
-    const { username, password, email } = req.body;
+    const { username, password, email, referralCode } = req.body;
     if (!username || !password || !email) {
         console.log(password)
         return res.status(400).send('Bad Request: Missing required fields');
@@ -34,6 +36,24 @@ router.post('/signup', async (req, res) => {
 
         const newUser = new User({ username, password, email, stripeCustomerId: customer.id });
         const savedUser = await newUser.save();
+
+        // Record referral if there's a referral code
+        if (referralCode) {
+            try {
+                const affiliate = await Affiliate.findOne({ code: referralCode, isActive: true });
+                if (affiliate) {
+                    const newReferral = new Referral({
+                        affiliateId: affiliate._id,
+                        userId: savedUser._id
+                    });
+                    await newReferral.save();
+                    console.log(`Recorded referral for user ${savedUser._id} from affiliate ${affiliate.name}`);
+                }
+            } catch (refErr) {
+                console.error('Failed to record referral:', refErr);
+                // Don't block signup if referral recording fails
+            }
+        }
 
         const token = jwt.sign({ id: savedUser._id }, SECRET_KEY);
 
@@ -441,11 +461,13 @@ router.get('/auth/google',
         const redirectTo = req.query.redirect || '/';
         const source = req.query.source || 'web';
         const redirectUrl = req.query.redirectUrl || null; // Extension redirect URL
+        const referralCode = req.query.ref || null; // Affiliate referral code
 
         const statePayload = {
             redirectTo,
             source,
-            redirectUrl
+            redirectUrl,
+            referralCode
         };
 
         const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
@@ -478,10 +500,11 @@ router.get('/auth/google/callback',
                 profilePicture: req.user.profilePicture
             };
 
-            // Extract redirect URL and source from state (stored via req.authInfo when store: true is set)
+            // Extract redirect URL, source, and referral code from state
             let redirectTo = '/';
             let source = 'web';
             let redirectUrl = null;
+            let referralCode = null;
 
             const stateParam = req.query.state;
             if (stateParam) {
@@ -490,8 +513,30 @@ router.get('/auth/google/callback',
                     redirectTo = decoded.redirectTo || '/';
                     source = decoded.source || 'web';
                     redirectUrl = decoded.redirectUrl || null;
+                    referralCode = decoded.referralCode || null;
                 } catch (err) {
                     console.warn('Failed to decode Google OAuth state', err);
+                }
+            }
+
+            // Record referral if this is a new user and there's a referral code
+            if (req.user._isNewUser && referralCode) {
+                try {
+                    const affiliate = await Affiliate.findOne({ code: referralCode, isActive: true });
+                    if (affiliate) {
+                        const existingReferral = await Referral.findOne({ userId: req.user._id });
+                        if (!existingReferral) {
+                            const newReferral = new Referral({
+                                affiliateId: affiliate._id,
+                                userId: req.user._id
+                            });
+                            await newReferral.save();
+                            console.log(`Recorded OAuth referral for user ${req.user._id} from affiliate ${affiliate.name}`);
+                        }
+                    }
+                } catch (refErr) {
+                    console.error('Failed to record OAuth referral:', refErr);
+                    // Don't block the OAuth flow if referral recording fails
                 }
             }
 

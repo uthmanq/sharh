@@ -78,6 +78,8 @@ passport.use(new GoogleStrategy({
         });
 
         await newUser.save();
+        // Mark as new user for referral tracking
+        newUser._isNewUser = true;
         done(null, newUser);
     } catch (err) {
         console.error('Error in Google OAuth strategy:', err);
