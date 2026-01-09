@@ -111,6 +111,7 @@ app.use((err, req, res, next) => {
     console.error('Request URL:', req.url);
     console.error('Request method:', req.method);
     console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('User ID:', req.user?.id || 'Not authenticated');
     res.status(500).send('Internal Server Error (MWE)');
   }
 });
