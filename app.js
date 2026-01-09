@@ -44,6 +44,20 @@ app.use(cors({
   exposedHeaders: ['Content-Disposition']
 }));
 
+// Middleware to block debug/test routes in production
+// This prevents accidentally deployed test routes from being accessible
+app.use((req, res, next) => {
+  const debugRoutes = ['/debug-sentry', '/test-error', '/debug', '/test'];
+  const isProduction = ENVIRONMENT === 'production';
+
+  if (isProduction && debugRoutes.some(route => req.path.startsWith(route))) {
+    console.warn(`Blocked access to debug route in production: ${req.path}`);
+    return res.status(404).send('Not Found');
+  }
+
+  next();
+});
+
 // Session configuration for OAuth
 app.use(session({
   secret: process.env.SESSION_SECRET || process.env.SECRET_KEY,
