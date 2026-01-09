@@ -22,7 +22,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             })
             .catch((error) => {
                 console.error('OAuth error:', error);
-                sendResponse({ success: false, error: error.message });
+                // Ensure we always send a descriptive error message
+                const errorMessage = error.message || error.toString() || 'Failed to complete authentication. Please try again.';
+                sendResponse({ success: false, error: errorMessage });
             });
         return true; // Keep the message channel open for async response
     }
@@ -52,7 +54,8 @@ async function handleGoogleOAuth() {
 
                 if (chrome.runtime.lastError) {
                     console.error('Background: OAuth error:', chrome.runtime.lastError);
-                    reject(new Error(chrome.runtime.lastError.message));
+                    const errorMessage = chrome.runtime.lastError.message || 'OAuth flow was interrupted';
+                    reject(new Error(errorMessage));
                     return;
                 }
 
@@ -83,7 +86,8 @@ async function handleGoogleOAuth() {
                         }
                     } catch (e) {
                         console.error('Background: Error parsing response:', e);
-                        reject(e);
+                        const errorMessage = e.message || 'Failed to process authentication response';
+                        reject(new Error(errorMessage));
                     }
                 } else {
                     reject(new Error('Authentication cancelled'));
