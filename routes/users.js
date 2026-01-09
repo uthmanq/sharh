@@ -12,56 +12,68 @@ const stripe = require('stripe')(stripeConfig.secretKey);
 const SECRET_KEY = process.env.SECRET_KEY;
 const { sendEmail, sendIndividualEmails } = require('../scripts/sendEmail');
 const passport = require('../config/passport');
+const { asyncHandler, AppError } = require('../utils/errorHandler');
 
 
 
 // POST Signup Endpoint
-router.post('/signup', async (req, res) => {
+router.post('/signup', asyncHandler(async (req, res) => {
     const { username, password, email, referralCode } = req.body;
+
     if (!username || !password || !email) {
-        console.log(password)
-        return res.status(400).send('Bad Request: Missing required fields');
+        throw new AppError('Missing required fields: username, password, and email are required', 400);
     }
-    try {
-        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-        if (existingUser) {
-            return res.status(400).send('Bad Request: User with the same username or email already exists');
-        }
 
-        // Create a new Stripe customer
-        const customer = await stripe.customers.create({
-            email: email,
-            name: username,
-        });
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
+        throw new AppError('User with the same username or email already exists', 400);
+    }
 
-        const newUser = new User({ username, password, email, stripeCustomerId: customer.id });
-        const savedUser = await newUser.save();
+    // Create a new Stripe customer
+    const customer = await stripe.customers.create({
+        email: email,
+        name: username,
+    });
 
-        // Record referral if there's a referral code
-        if (referralCode) {
-            try {
-                const affiliate = await Affiliate.findOne({ code: referralCode, isActive: true });
-                if (affiliate) {
-                    const newReferral = new Referral({
-                        affiliateId: affiliate._id,
-                        userId: savedUser._id
-                    });
-                    await newReferral.save();
-                    console.log(`Recorded referral for user ${savedUser._id} from affiliate ${affiliate.name}`);
-                }
-            } catch (refErr) {
-                console.error('Failed to record referral:', refErr);
-                // Don't block signup if referral recording fails
+    const newUser = new User({ username, password, email, stripeCustomerId: customer.id });
+    const savedUser = await newUser.save();
+
+    // Record referral if there's a referral code
+    if (referralCode) {
+        try {
+            const affiliate = await Affiliate.findOne({ code: referralCode, isActive: true });
+            if (affiliate) {
+                const newReferral = new Referral({
+                    affiliateId: affiliate._id,
+                    userId: savedUser._id
+                });
+                await newReferral.save();
+                console.log(`Recorded referral for user ${savedUser._id} from affiliate ${affiliate.name}`);
             }
+        } catch (refErr) {
+            console.error('Failed to record referral:', refErr);
+            // Don't block signup if referral recording fails
         }
+    }
 
-        const token = jwt.sign({ id: savedUser._id }, SECRET_KEY);
+    const token = jwt.sign({ id: savedUser._id }, SECRET_KEY);
 
-        res.status(201).json({ token, user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, stripeCustomerId: savedUser.stripeCustomerId, roles: savedUser.roles } });
-        // Send welcome email asynchronously
-        const recipients = [savedUser.email];
-        const subject = 'Welcome to Sharh App: Join the Community!';
-        const html = `<p> Dear ${savedUser.username},</p>
+    res.status(201).json({
+        success: true,
+        token,
+        user: {
+            id: savedUser._id,
+            username: savedUser.username,
+            email: savedUser.email,
+            stripeCustomerId: savedUser.stripeCustomerId,
+            roles: savedUser.roles
+        }
+    });
+
+    // Send welcome email asynchronously (don't block response)
+    const recipients = [savedUser.email];
+    const subject = 'Welcome to Sharh App: Join the Community!';
+    const html = `<p> Dear ${savedUser.username},</p>
 <p> Assalamualaykum! Thank you for joining <strong>Sharh</strong>. Our vision to give users across the world access to the Ummah's written tradition. Sharh is an application aimed at redesigning how translations are read and taught. Every day, our library of translations in Kalam, Fiqh, Mantiq, Usul ul-Fiqh, and more are growing. We are pleased to have you join the Sharh community. </p>
 
 <p> We have an exclusive members-only Telegram group that you are invited to join, where we will be posting exclusive content, updates, and discussions on everything related to translations, Kalam, Fiqh, Mantiq, and the likes. You can join the link by downloading Telegram and <a href="https://t.me/+UUYyTtJSzzAwNWIx">then joining the group here.</a>We have so many new features and new books to be announced and published! You can read more about our planned features on our front page. </p>
@@ -70,26 +82,20 @@ router.post('/signup', async (req, res) => {
 <p> Uthman Qureshi (Founder and Translator of Sharh) </p>
 
 <p>PS: If you find any benefit in the app, we would be thrilled if you chose to <a href="https://sharhapp.com/support">become a monthly supporter here</a>. It is only through the kindness of supporters like yourself that a project like this can continue. (Btw, it costs less than a cup of coffee a month.) </p>
-        `;
+    `;
 
-        // Send email without affecting signup success
-        sendEmail(
-            recipients,
-            subject,
-            html,
-            (info) => {
-                console.log('Welcome email sent successfully', info.messageId);
-            },
-            (error) => {
-                console.error('Failed to send welcome email', error.message);
-            }
-        );
-
-    } catch (err) {
-        console.log(err);
-        res.status(500).send('Internal Server Error');
-    }
-});
+    sendEmail(
+        recipients,
+        subject,
+        html,
+        (info) => {
+            console.log('Welcome email sent successfully', info.messageId);
+        },
+        (error) => {
+            console.error('Failed to send welcome email', error.message);
+        }
+    );
+}));
 
 // POST Login Endpoint
 router.post('/login', async (req, res) => {

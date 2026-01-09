@@ -81,6 +81,7 @@ const cardRoutes = require('./routes/cards');
 const cardCollectionRoutes = require('./routes/cardCollections');
 const ocrRoutes = require('./routes/ocr');
 const affiliateRoutes = require('./routes/affiliates');
+const { errorMiddleware, handleUnhandledRejection, handleUncaughtException } = require('./utils/errorHandler');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -98,22 +99,22 @@ app.use('/card-collections', cardCollectionRoutes);
 app.use('/ocr', ocrRoutes);
 app.use('/affiliates', affiliateRoutes);
 
-
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  if (err instanceof URIError) {
-    console.error('URIError:', err.message);
-    res.status(400).send('Bad Request: Malformed URL');
-  } else {
-    console.error('Error handling middleware caught error:');
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
-    console.error('Request URL:', req.url);
-    console.error('Request method:', req.method);
-    console.error('Request body:', JSON.stringify(req.body, null, 2));
-    res.status(500).send('Internal Server Error (MWE)');
-  }
+// 404 handler - must come before error middleware
+app.use((req, res, next) => {
+  const error = new Error(`Route not found: ${req.method} ${req.url}`);
+  error.statusCode = 404;
+  next(error);
 });
+
+// Centralized Error Handling Middleware
+// This must be the last middleware
+app.use(errorMiddleware);
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', handleUnhandledRejection);
+
+// Handle uncaught exceptions
+process.on('uncaughtException', handleUncaughtException);
 
 const PORT = process.env.PORT || 3000;
 
