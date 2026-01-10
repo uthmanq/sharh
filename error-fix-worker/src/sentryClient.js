@@ -72,11 +72,25 @@ class SentryClient {
   async enrichErrorData(errorData) {
     if (!this.authToken) {
       console.warn('[Sentry API] No auth token configured, skipping enrichment');
+
+      // If we don't have file location and can't enrich, mark as insufficient data
+      if (!errorData.fileName) {
+        console.error('[Sentry API] ERROR: No file location and cannot enrich without auth token');
+        throw new Error('Insufficient error data: No stack trace and no Sentry auth token for enrichment');
+      }
+
       return errorData;
     }
 
     if (!errorData.issueId) {
       console.warn('[Sentry API] No issue ID in error data, skipping enrichment');
+
+      // If we don't have file location and can't enrich, mark as insufficient data
+      if (!errorData.fileName) {
+        console.error('[Sentry API] ERROR: No file location and no issue ID for enrichment');
+        throw new Error('Insufficient error data: No stack trace and no issue ID for API enrichment');
+      }
+
       return errorData;
     }
 

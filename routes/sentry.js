@@ -145,13 +145,28 @@ router.post('/webhook', async (req, res) => {
     const stackFrames = exceptionValue.stacktrace?.frames || [];
 
     // Find the most relevant frame (last in-app frame, or last frame)
-    const inAppFrame = [...stackFrames].reverse().find(f => f.in_app) || stackFrames[stackFrames.length - 1];
+    let inAppFrame = null;
+    if (stackFrames.length > 0) {
+      inAppFrame = [...stackFrames].reverse().find(f => f.in_app) || stackFrames[stackFrames.length - 1];
+    }
+
+    // Extract error type and message with better fallbacks
+    const errorType = exceptionValue.type || errorEvent.type || 'UnknownError';
+    const errorMessage = exceptionValue.value || errorEvent.message || errorEvent.title || 'Unknown error';
+
+    // Log warning if we have insufficient error data
+    if (!inAppFrame && stackFrames.length === 0) {
+      console.warn('[Sentry Webhook] Warning: No stack trace available for error');
+      console.warn('[Sentry Webhook] Error type:', errorType);
+      console.warn('[Sentry Webhook] Error message:', errorMessage);
+      console.warn('[Sentry Webhook] Event ID:', errorEvent.event_id);
+    }
 
     const errorData = {
       eventId: errorEvent.event_id || `sentry-${Date.now()}`,
       issueId: errorEvent.issue_id,
-      errorType: exceptionValue.type || 'UnknownError',
-      errorMessage: exceptionValue.value || errorEvent.title || 'Unknown error',
+      errorType: errorType,
+      errorMessage: errorMessage,
       stackTrace: JSON.stringify(stackFrames),
       fileName: inAppFrame?.filename || inAppFrame?.abs_path || null,
       lineNumber: inAppFrame?.lineno || null,
@@ -169,6 +184,16 @@ router.post('/webhook', async (req, res) => {
     };
 
     console.log('[Sentry Webhook] Built errorData:', JSON.stringify(errorData, null, 2));
+
+    // Skip errors without sufficient location information
+    // These can't be automatically fixed as we don't know which file to modify
+    if (!errorData.fileName && !errorData.issueId) {
+      console.log('[Sentry Webhook] Skipping error with no file location and no issue ID for enrichment');
+      return res.status(200).json({
+        message: 'Error skipped: insufficient location information',
+        reason: 'No stack trace or file location available. This error cannot be automatically fixed.'
+      });
+    }
 
     // Check if we should process this error
     if (!shouldProcessError(errorData)) {
