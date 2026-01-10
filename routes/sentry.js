@@ -145,20 +145,42 @@ router.post('/webhook', async (req, res) => {
     const stackFrames = exceptionValue.stacktrace?.frames || [];
 
     // Find the most relevant frame (last in-app frame, or last frame)
-    const inAppFrame = [...stackFrames].reverse().find(f => f.in_app) || stackFrames[stackFrames.length - 1];
+    let inAppFrame = null;
+    if (stackFrames.length > 0) {
+      inAppFrame = [...stackFrames].reverse().find(f => f.in_app) || stackFrames[stackFrames.length - 1];
+    }
+
+    // Extract file location from culprit if stack frame is not available
+    // Culprit format is typically "module.function" or "file:line:col"
+    let culpritFileName = null;
+    let culpritLineNumber = null;
+    const culprit = errorEvent.culprit || errorEvent.transaction;
+    if (!inAppFrame && culprit) {
+      // Try to parse culprit for file:line:col pattern
+      const culpritMatch = culprit.match(/([^:]+):(\d+):(\d+)/);
+      if (culpritMatch) {
+        culpritFileName = culpritMatch[1];
+        culpritLineNumber = parseInt(culpritMatch[2], 10);
+      }
+    }
+
+    // Determine error type and message with better defaults
+    const errorType = exceptionValue.type || errorEvent.type || 'Error';
+    const errorMessage = exceptionValue.value || errorEvent.message || errorEvent.title ||
+                        (errorEvent.metadata?.value) || 'No error message provided';
 
     const errorData = {
       eventId: errorEvent.event_id || `sentry-${Date.now()}`,
       issueId: errorEvent.issue_id,
-      errorType: exceptionValue.type || 'UnknownError',
-      errorMessage: exceptionValue.value || errorEvent.title || 'Unknown error',
+      errorType: errorType,
+      errorMessage: errorMessage,
       stackTrace: JSON.stringify(stackFrames),
-      fileName: inAppFrame?.filename || inAppFrame?.abs_path || null,
-      lineNumber: inAppFrame?.lineno || null,
+      fileName: inAppFrame?.filename || inAppFrame?.abs_path || culpritFileName || 'unknown',
+      lineNumber: inAppFrame?.lineno || culpritLineNumber || null,
       colNumber: inAppFrame?.colno || null,
       functionName: inAppFrame?.function || null,
       codeContext: inAppFrame?.context_line || null,
-      culprit: errorEvent.culprit || errorEvent.transaction,
+      culprit: culprit,
       environment: errorEvent.environment || 'unknown',
       timestamp: errorEvent.datetime || new Date().toISOString(),
       projectName: event.data?.project?.name || 'sharh',
@@ -169,6 +191,13 @@ router.post('/webhook', async (req, res) => {
     };
 
     console.log('[Sentry Webhook] Built errorData:', JSON.stringify(errorData, null, 2));
+
+    // Validate that we have sufficient error information
+    // Skip errors with no meaningful data to avoid processing "Unknown error" with no context
+    if (errorType === 'Error' && errorMessage === 'No error message provided' && !inAppFrame && !culpritFileName) {
+      console.log('[Sentry Webhook] Skipping error with insufficient information (no stack trace, no culprit, no message)');
+      return res.status(200).json({ message: 'Error has insufficient information for processing' });
+    }
 
     // Check if we should process this error
     if (!shouldProcessError(errorData)) {
