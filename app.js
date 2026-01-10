@@ -1,3 +1,14 @@
+// Load environment variables first
+require('dotenv').config();
+
+// Initialize Sentry BEFORE importing other modules
+const Sentry = require('@sentry/node');
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.ENVIRONMENT || 'development',
+  tracesSampleRate: 1.0, // Capture 100% of transactions for performance monitoring
+});
+
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
@@ -5,7 +16,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-require('dotenv').config();
 const path = require('path');
 const session = require('express-session');
 const passport = require('./config/passport');
@@ -27,6 +37,9 @@ if (args.includes('--teststripe')) {
 // Stripe webhook needs raw body for signature verification
 // This MUST be before the regular body parsers
 app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
+
+// Sentry webhook needs raw body for signature verification
+app.use('/sentry/webhook', express.raw({ type: 'application/json' }));
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' })); // Increased limit for OCR results with large text
@@ -81,6 +94,7 @@ const cardRoutes = require('./routes/cards');
 const cardCollectionRoutes = require('./routes/cardCollections');
 const ocrRoutes = require('./routes/ocr');
 const affiliateRoutes = require('./routes/affiliates');
+const sentryRoutes = require('./routes/sentry');
 
 // Use Routes
 app.use('/books', bookRoutes);
@@ -97,7 +111,16 @@ app.use('/cards', cardRoutes);
 app.use('/card-collections', cardCollectionRoutes);
 app.use('/ocr', ocrRoutes);
 app.use('/affiliates', affiliateRoutes);
+app.use('/sentry', sentryRoutes);
 
+
+// Test route to verify Sentry is working
+app.get('/debug-sentry', (req, res) => {
+  throw new Error('Test Sentry error!');
+});
+
+// Sentry error handler - must be before other error handlers
+Sentry.setupExpressErrorHandler(app);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
